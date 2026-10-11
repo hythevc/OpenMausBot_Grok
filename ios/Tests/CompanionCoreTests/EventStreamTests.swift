@@ -175,6 +175,77 @@ final class EventStreamTests: XCTestCase {
         }
     }
 
+    func testUndecodableMessageStopsBeforeAdvancingPastTheMissingEvent() async {
+        StreamingStub.chunks = [
+            "data: {\"kind\":\"hello\",\"cursor\":\"abc12345:4\",\"resumed\":true}\n\n",
+            "id: abc12345:5\ndata: {\"kind\":\"message\",\"seq\":5,\"threadId\":\"t1\",\"message\":\"private-payload-sentinel\"}\n\n",
+            "id: abc12345:6\ndata: {\"kind\":\"config\",\"seq\":6}\n\n",
+        ]
+        var state = CompanionState()
+        state.resetCursor("abc12345:4")
+        var received = 0
+        do {
+            for try await frame in eventStream(request: request, session: session) {
+                received += 1
+                state.apply(frame)
+                state.advance(to: frame.seq)
+            }
+            XCTFail("An undecodable message must fail the stream before the later sequence arrives")
+        } catch {
+            XCTAssertEqual(error as? EventStreamError, .undecodableFrame)
+            XCTAssertFalse(error.localizedDescription.contains("private-payload-sentinel"))
+        }
+        XCTAssertEqual(received, 1)
+        XCTAssertEqual(state.cursor, "abc12345:4", "Reconnect must still request the missing event")
+    }
+
+    func testHelloWithoutCursorFailsInsteadOfLeavingTheConnectionWaiting() async {
+        StreamingStub.chunks = [
+            "data: {\"kind\":\"hello\",\"resumed\":false}\n\n",
+            "data: {\"kind\":\"config\",\"seq\":1}\n\n",
+        ]
+        var received = 0
+        do {
+            for try await _ in eventStream(request: request, session: session) { received += 1 }
+            XCTFail("A hello that cannot be decoded must surface as a connection error")
+        } catch {
+            XCTAssertEqual(error as? EventStreamError, .undecodableFrame)
+        }
+        XCTAssertEqual(received, 0)
+    }
+
+    func testFutureFrameKindStillAllowsTheFollowingFrame() async throws {
+        StreamingStub.chunks = [
+            "data: {\"kind\":\"future.feature\",\"seq\":1,\"newPayload\":{\"value\":true}}\n\n",
+            "data: {\"kind\":\"config\",\"seq\":2}\n\n",
+        ]
+        let frames = try await collect(limit: 2)
+        guard frames.count == 2 else { return XCTFail("Expected both compatible frames") }
+        guard case .unknown(kind: "future.feature") = frames[0].frame else {
+            return XCTFail("Future kinds must retain their forward-compatible representation")
+        }
+        guard case .config = frames[1].frame else { return XCTFail("Expected the following frame") }
+        XCTAssertEqual(frames[1].seq, 2)
+    }
+
+    func testInvalidJSONFailsWithOnlyTheSafeRecoveryMessage() async {
+        StreamingStub.chunks = [
+            "data: {private-payload-sentinel\n\n",
+            "data: {\"kind\":\"config\",\"seq\":2}\n\n",
+        ]
+        var received = 0
+        do {
+            for try await _ in eventStream(request: request, session: session) { received += 1 }
+            XCTFail("Invalid JSON must fail the stream")
+        } catch {
+            XCTAssertEqual(error as? EventStreamError, .undecodableFrame)
+            XCTAssertTrue(error.localizedDescription.contains("Pull to refresh"))
+            XCTAssertFalse(error.localizedDescription.contains("private-payload-sentinel"))
+            XCTAssertFalse(String(reflecting: error).contains("private-payload-sentinel"))
+        }
+        XCTAssertEqual(received, 0)
+    }
+
     func testCancellingTheConsumerTearsDownTheRequest() async throws {
         StreamingStub.chunks = [
             "data: {\"kind\":\"hello\",\"cursor\":\"abc12345:0\",\"resumed\":false}\n\n",

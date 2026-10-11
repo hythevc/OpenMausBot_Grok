@@ -10,11 +10,14 @@
 // `id: <streamId>:<seq>` followed by one `data:` line, separated by a blank
 // line, with `: keepalive` comments every 25 seconds.
 import Foundation
-import OSLog
 
-/// Same subsystem the app's own stream logging uses, so a session reads as
-/// one story in Console rather than two halves under different names.
-private let log = Logger(subsystem: "com.openmausbot.companion", category: "stream")
+public enum EventStreamError: LocalizedError, Equatable, Sendable {
+    case undecodableFrame
+
+    public var errorDescription: String? {
+        "Can't read updates from your computer. Pull to refresh. If this continues, update the app and your computer's bot software."
+    }
+}
 
 /// One event off the wire, before it is understood as a `Frame`.
 public struct SSEEvent: Equatable, Sendable {
@@ -148,27 +151,10 @@ public func eventStream(
 
                     guard let event = parser.line(text) else { continue }
                     guard let data = event.data.data(using: .utf8) else { continue }
-                    // A frame we cannot decode is one frame lost, not a dead
-                    // stream: `Frame` already absorbs unknown kinds, so this
-                    // only catches genuinely malformed JSON.
-                    //
-                    // `hello` is the exception that makes the silence
-                    // dangerous. `Session` leaves `.connecting` and hydrates
-                    // only when a hello arrives, and `Frame.init(from:)`
-                    // requires its `cursor` — so a hello missing that field
-                    // throws, is dropped here, and the app waits forever on a
-                    // stream that is open and healthy, with nothing anywhere
-                    // saying why. Naming the kind costs one line and turns
-                    // that into something a console can answer.
+                    // Advancing past an unreadable event would skip it on reconnect.
+                    // Unknown kinds still decode through Frame's compatibility policy.
                     guard let frame = try? decoder.decode(StreamFrame.self, from: data) else {
-                        var kind = "unknown"
-                        if let object = try? JSONSerialization.jsonObject(with: data),
-                           let fields = object as? [String: Any],
-                           let named = fields["kind"] as? String {
-                            kind = named
-                        }
-                        log.error("dropped an undecodable frame (kind: \(kind, privacy: .public))")
-                        continue
+                        throw EventStreamError.undecodableFrame
                     }
                     continuation.yield(frame)
                 }
