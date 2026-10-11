@@ -4638,7 +4638,17 @@ describe("harness HTTP API", () => {
       composio: true,
       computer: "off",
     });
-    const groupsBefore = (await api("GET", "/api/bots")).body.groups.length;
+    const otherChief = (await api("POST", "/api/bots")).body.bot;
+    expect((await api("PATCH", `/api/bots/${otherChief.id}`, {
+      section: "Other import team",
+      chiefOfStaff: true,
+    })).status).toBe(200);
+    const before = (await api("GET", "/api/bots")).body;
+    const chiefsBefore = before.bots
+      .filter((bot: { chiefOfStaff?: boolean }) => bot.chiefOfStaff)
+      .map((bot: { id: string }) => bot.id).sort();
+    expect(chiefsBefore).toEqual(expect.arrayContaining([trusted.id, otherChief.id]));
+    const groupsBefore = before.groups.length;
     const room = (await api("POST", "/api/groups", { memberIds: [trusted.id], name: "War Room" })).body.group;
 
     const smuggled = {
@@ -4704,10 +4714,9 @@ describe("harness HTTP API", () => {
       composio: true,
       computer: "off",
     });
-    // the single-Chief invariant survives the manifest's chiefOfStaff claim
-    expect(after.bots.filter((bot: { chiefOfStaff?: boolean }) => bot.chiefOfStaff).map((bot: { id: string }) => bot.id)).toEqual([
-      trusted.id,
-    ]);
+    // Import cannot replace or add Chiefs in any existing section.
+    expect(after.bots.filter((bot: { chiefOfStaff?: boolean }) => bot.chiefOfStaff)
+      .map((bot: { id: string }) => bot.id).sort()).toEqual(chiefsBefore);
 
     // a legacy v1 file carries a room block; import ignores it entirely —
     // it neither creates a room nor touches the existing one sharing its name
@@ -4740,14 +4749,17 @@ describe("harness HTTP API", () => {
     expect(secondBot.id).not.toBe(impostor.id);
     expect(secondBot.name).toBe("Mira 4");
     expect(secondBot.composio).toBe(false);
-    expect((await api("GET", "/api/bots")).body.bots.find((bot: { id: string }) => bot.id === impostor.id)).toMatchObject({
+    const finalBots = (await api("GET", "/api/bots")).body.bots;
+    expect(finalBots.find((bot: { id: string }) => bot.id === impostor.id)).toMatchObject({
       name: "Mira 2",
       description: "edited after import",
       composio: true,
     });
+    expect(finalBots.filter((bot: { chiefOfStaff?: boolean }) => bot.chiefOfStaff)
+      .map((bot: { id: string }) => bot.id).sort()).toEqual(chiefsBefore);
 
     await api("DELETE", `/api/groups/${room.id}`);
-    for (const bot of [trusted, impostor, legacy.body.bots[0], secondBot]) {
+    for (const bot of [trusted, otherChief, impostor, legacy.body.bots[0], secondBot]) {
       expect((await api("DELETE", `/api/bots/${bot.id}`)).status).toBe(200);
     }
   });
