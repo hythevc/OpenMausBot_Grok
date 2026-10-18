@@ -356,8 +356,12 @@ jobs:
           include-hidden-files: true
           retention-days: 7
 
-  ios:
-    name: Swift tests + iOS build + thread UI
+  ios-device:
+    name: iOS verification (${{ matrix.device }})
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [iphone, ipad]
     runs-on: macos-latest
     timeout-minutes: 35
     steps:
@@ -379,17 +383,29 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
             build
-      - name: Verify thread navigation on disposable iPhone and iPad simulators
-        run: bash scripts/verify-ios-thread-navigation-ci.sh
+      - name: Verify thread navigation on a disposable simulator
+        run: bash scripts/verify-ios-thread-navigation-ci.sh "${{ matrix.device }}"
       - name: Keep native thread test results and screenshots
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ios-thread-ui-${{ github.sha }}-${{ github.run_attempt }}
+          name: ios-thread-ui-${{ matrix.device }}-${{ github.sha }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/omb-ios-threads-*.xcresult
           if-no-files-found: warn
           include-hidden-files: true
           retention-days: 7
+
+  ios:
+    name: Swift tests + iOS build + thread UI
+    needs: [ios-device]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Both native device suites passed
+        env:
+          IOS_DEVICE_RESULT: ${{ needs.ios-device.result }}
+        run: test "$IOS_DEVICE_RESULT" = success
 
   # Deliberately not scoped to android/**: :core's test fixtures are read from
   # ios/Tests/CompanionCoreTests/Fixtures, so a path filter would skip the

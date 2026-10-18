@@ -5,6 +5,12 @@ set -euo pipefail
 # its own simulators; no phone is paired and no desktop data is opened.
 cd "$(dirname "$0")/../ios"
 
+case "${1:-all}" in
+  all) device_kinds=(iphone ipad) ;;
+  iphone|ipad) device_kinds=("$1") ;;
+  *) echo "Usage: $0 [all|iphone|ipad]" >&2; exit 2 ;;
+esac
+
 runtime_id=$(xcrun simctl list runtimes -j | python3 -c '
 import json, sys
 runtimes = json.load(sys.stdin)["runtimes"]
@@ -37,7 +43,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for kind in iphone ipad; do
+for kind in "${device_kinds[@]}"; do
   simulator_id=$(xcrun simctl create "omb-ios-threads-${kind}-${GITHUB_RUN_ID}" "$(device_type "$kind")" "$runtime_id")
   created_ids+=("$simulator_id")
   xcrun simctl boot "$simulator_id"
@@ -52,4 +58,5 @@ for kind in iphone ipad; do
     -parallel-testing-enabled NO \
     -only-testing:OpenMausCompanionUITests/ThreadNavigationUITests \
     CODE_SIGNING_ALLOWED=NO test
+  xcrun simctl shutdown "$simulator_id"
 done
