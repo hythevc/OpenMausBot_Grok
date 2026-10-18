@@ -40,6 +40,8 @@ trap cleanup EXIT
 for kind in iphone ipad; do
   simulator_id=$(xcrun simctl create "omb-ios-threads-${kind}-${GITHUB_RUN_ID}" "$(device_type "$kind")" "$runtime_id")
   created_ids+=("$simulator_id")
+  xcrun simctl boot "$simulator_id"
+  xcrun simctl bootstatus "$simulator_id" -b
   xcodebuild \
     -project OpenMausCompanion.xcodeproj \
     -scheme OpenMausCompanion \
