@@ -190,7 +190,13 @@ describe("server-owned browser MCP runtime", () => {
     expect(value.canControl("s", "owner")).toBe(true);
   });
   it("does not assume an MCP timeout stopped an accepted daemon action", async () => {
-    const value = runtime({ requestTimeoutMs: 60 });
+    // The timeout covers every request, including the initialize handshake of
+    // the fresh engine spawned after restart. 60 ms was shorter than a cold
+    // `node -e` start on Windows and macOS runners, so the post-restart call
+    // timed out instead of resolving. Warm up first so the timeout below is
+    // the hung tool call, not a slow handshake.
+    const value = runtime({ requestTimeoutMs: 2_000 });
+    await expect(value.agentRpc("s", spec(), "tools/list", {})).resolves.toMatchObject({ initialized: true });
     await expect(value.agentRpc("s", spec(), "tools/call", { name: "hang" })).rejects.toThrow(/timed out/);
     // The real daemon detaches from its MCP parent. Transport exit is not
     // proof that a navigation or submission stopped; do not replay it.
