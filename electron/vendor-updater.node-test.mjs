@@ -257,10 +257,19 @@ test("Electron relaunch waits for deferred cleanup and the replacement acquires 
   const leaseModule = new URL("./data-dir-lease.mjs", import.meta.url).href;
   const replacement = `
     const { writeFileSync } = require("node:fs");
+    const { spawnSync } = require("node:child_process");
     (async () => {
       let parentAlive = true;
       try { process.kill(Number(process.env.OMB_UPDATER_TEST_PARENT), 0); }
       catch (error) { if (error.code === "ESRCH") parentAlive = false; else throw error; }
+      if (parentAlive) {
+        // kill(pid, 0) also succeeds for an exited process awaiting reaping.
+        const state = spawnSync("ps", ["-o", "stat=", "-p", process.env.OMB_UPDATER_TEST_PARENT], { encoding: "utf8" });
+        if (state.error) throw state.error;
+        if (state.status === 1 && !state.stdout.trim() && !state.stderr.trim()) parentAlive = false;
+        else if (state.status === 0 && state.stdout.trim()) parentAlive = !state.stdout.trim().startsWith("Z");
+        else throw new Error("Could not inspect parent process state: " + state.stderr);
+      }
       const { acquireDataDirLease } = await import(${JSON.stringify(leaseModule)});
       const lease = acquireDataDirLease(${JSON.stringify(join(workspace, "data"))});
       lease.release();
