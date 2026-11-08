@@ -231,7 +231,15 @@ const api = async (method: string, path: string, body?: unknown): Promise<{ stat
     headers: body ? { "content-type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  return { status: res.status, body: await res.json() };
+  const result = { status: res.status, body: await res.json() };
+  if (method === "DELETE" && /^\/api\/(?:bots|groups)\/[\w-]+$/.test(path) && res.status >= 400) {
+    console.log("[ci-fixture] deletion response", JSON.stringify({
+      test: expect.getState().currentTestName,
+      path,
+      status: res.status,
+    }));
+  }
+  return result;
 };
 
 /** Pair a device the way a phone or a second person does, and act as them. */
@@ -4705,7 +4713,11 @@ describe("harness HTTP API", () => {
       computer: "off",
     });
     // the single-Chief invariant survives the manifest's chiefOfStaff claim
-    expect(after.bots.filter((bot: { chiefOfStaff?: boolean }) => bot.chiefOfStaff).map((bot: { id: string }) => bot.id)).toEqual([
+    const chiefs = after.bots.filter((bot: { chiefOfStaff?: boolean }) => bot.chiefOfStaff);
+    const chiefState = chiefs.map((bot: { id: string; name: string; section?: string; busy?: boolean }) => ({
+      id: bot.id, name: bot.name, section: bot.section, busy: bot.busy,
+    }));
+    expect(chiefs.map((bot: { id: string }) => bot.id), JSON.stringify({ chiefs: chiefState })).toEqual([
       trusted.id,
     ]);
 
