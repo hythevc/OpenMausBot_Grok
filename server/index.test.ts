@@ -242,6 +242,20 @@ const api = async (method: string, path: string, body?: unknown): Promise<{ stat
   return result;
 };
 
+const stopFixtureGroup = async (groupId: string): Promise<void> => {
+  expect((await api("POST", `/api/groups/${groupId}/interrupt`, {})).status).toBe(200);
+  await expect.poll(async () => {
+    const state = (await api("GET", "/api/bots?messages=0")).body;
+    const group = state.groups.find((candidate: { id: string }) => candidate.id === groupId);
+    return { working: group?.working, busyBotId: group?.busyBotId };
+  }, { timeout: 5_000 }).toEqual({ working: false, busyBotId: null });
+};
+
+const deleteFixtureGroup = async (groupId: string): Promise<void> => {
+  await stopFixtureGroup(groupId);
+  expect((await api("DELETE", `/api/groups/${groupId}`)).status).toBe(200);
+};
+
 /** Pair a device the way a phone or a second person does, and act as them. */
 const asPairedPerson = async (label: string) => {
   const opened = await api("POST", "/api/auth/pairing", {});
@@ -1509,8 +1523,7 @@ describe("harness HTTP API", () => {
       expect(group.setupCompletedAt).toEqual(expect.any(Number));
       expect((await api("POST", `/api/groups/${group.id}/messages`, { text: "A quiet update" })).status).toBe(202);
     } finally {
-      await api("POST", `/api/groups/${group.id}/interrupt`, {});
-      await api("DELETE", `/api/groups/${group.id}`);
+      await deleteFixtureGroup(group.id);
     }
   });
 
@@ -1737,9 +1750,8 @@ describe("harness HTTP API", () => {
         return state?.tasks?.find((task: { threadId: string }) => task.threadId === room.threadId)?.title;
       }, { timeout: 5_000 }).toBe("Fix login timeout");
     } finally {
-      await api("POST", `/api/groups/${room.id}/interrupt`, {}).catch(() => undefined);
-      await api("DELETE", `/api/groups/${room.id}`);
-      await api("DELETE", `/api/bots/${member.id}`);
+      await deleteFixtureGroup(room.id);
+      expect((await api("DELETE", `/api/bots/${member.id}`)).status).toBe(200);
       rmSync(oneShotTextFile, { force: true });
     }
   });
@@ -1787,9 +1799,8 @@ describe("harness HTTP API", () => {
       expect(state.tasks.find((task: { threadId: string }) => task.threadId === room.threadId).title)
         .toBe(firstMessage);
     } finally {
-      await api("POST", `/api/groups/${room.id}/interrupt`, {}).catch(() => undefined);
-      await api("DELETE", `/api/groups/${room.id}`);
-      await api("DELETE", `/api/bots/${member.id}`);
+      await deleteFixtureGroup(room.id);
+      expect((await api("DELETE", `/api/bots/${member.id}`)).status).toBe(200);
     }
   });
 
@@ -1822,8 +1833,7 @@ describe("harness HTTP API", () => {
         message.role === "user" && message.sendId === sendId
       )).toHaveLength(1);
     } finally {
-      await api("POST", `/api/groups/${room.id}/interrupt`, {}).catch(() => undefined);
-      await api("DELETE", `/api/groups/${room.id}`);
+      await deleteFixtureGroup(room.id);
     }
   });
 
@@ -2061,10 +2071,12 @@ describe("harness HTTP API", () => {
       expect(await readRoom()).toMatchObject({ bulletin: "Updated brief ✓", memberIds: [chief.id, peer.id] });
     } finally {
       for (const id of roomIds) {
-        await api("POST", `/api/groups/${id}/interrupt`, {});
-        await api("DELETE", `/api/groups/${id}`);
+        await deleteFixtureGroup(id);
       }
-      for (const bot of bots) await api("DELETE", `/api/bots/${bot.id}`);
+      for (const bot of bots) expect((await api("DELETE", `/api/bots/${bot.id}`)).status).toBe(200);
+      const remaining = (await api("GET", "/api/bots?messages=0")).body;
+      expect(remaining.bots.some((bot: { id: string }) => bots.some((owned) => owned.id === bot.id))).toBe(false);
+      expect(remaining.groups.some((group: { id: string }) => roomIds.includes(group.id))).toBe(false);
     }
   });
 
@@ -3805,10 +3817,9 @@ describe("harness HTTP API", () => {
       expect(current.messages.find((message: { role: string }) => message.role === "user")?.text)
         .toBe(text);
     } finally {
-      if (room) await api("POST", `/api/groups/${room.id}/interrupt`, {}).catch(() => undefined);
-      if (room) await api("DELETE", `/api/groups/${room.id}`).catch(() => undefined);
+      if (room) await deleteFixtureGroup(room.id);
       await api("POST", `/api/bots/${bot.id}/interrupt`, {}).catch(() => undefined);
-      await api("DELETE", `/api/bots/${bot.id}`).catch(() => undefined);
+      expect((await api("DELETE", `/api/bots/${bot.id}`)).status).toBe(200);
     }
   });
 
@@ -5632,8 +5643,7 @@ describe("harness HTTP API", () => {
       expect(compactRoom.body.group).not.toHaveProperty("messages");
       expect(compactRoom.body.group).not.toHaveProperty("activeLeafId");
     } finally {
-      await api("POST", `/api/groups/${room.id}/interrupt`, {});
-      await api("DELETE", `/api/groups/${room.id}`);
+      await deleteFixtureGroup(room.id);
       await api("POST", `/api/bots/${bot.id}/interrupt`, {});
       await api("DELETE", `/api/bots/${bot.id}`);
     }
@@ -6830,9 +6840,8 @@ describe("harness HTTP API", () => {
         (candidate: { id: string }) => candidate.id === bot.id,
       )).toBe(true);
     } finally {
-      await api("POST", `/api/groups/${room.id}/interrupt`, {}).catch(() => undefined);
-      await api("DELETE", `/api/groups/${room.id}`).catch(() => undefined);
-      await api("DELETE", `/api/bots/${bot.id}`).catch(() => undefined);
+      await deleteFixtureGroup(room.id);
+      expect((await api("DELETE", `/api/bots/${bot.id}`)).status).toBe(200);
     }
   });
 
@@ -6953,8 +6962,7 @@ describe("harness HTTP API", () => {
     } finally {
       if (callId) await api("DELETE", `/api/calendar-calls/${callId}`).catch(() => undefined);
       if (roomId) {
-        await api("POST", `/api/groups/${roomId}/interrupt`, {}).catch(() => undefined);
-        await api("DELETE", `/api/groups/${roomId}`).catch(() => undefined);
+        await deleteFixtureGroup(roomId);
       }
       await api("DELETE", `/api/bots/${first.id}`).catch(() => undefined);
       await api("DELETE", `/api/bots/${second.id}`).catch(() => undefined);
@@ -7058,9 +7066,8 @@ describe("harness HTTP API", () => {
     } finally {
       if (runId) await api("POST", `/api/routine-runs/${runId}/cancel`).catch(() => undefined);
       if (routineId) await api("DELETE", `/api/routines/${routineId}`).catch(() => undefined);
-      await api("POST", `/api/groups/${room.id}/interrupt`, {}).catch(() => undefined);
-      await api("DELETE", `/api/groups/${room.id}`).catch(() => undefined);
-      await api("DELETE", `/api/bots/${bot.id}`).catch(() => undefined);
+      await deleteFixtureGroup(room.id);
+      expect((await api("DELETE", `/api/bots/${bot.id}`)).status).toBe(200);
     }
   });
 
@@ -7100,10 +7107,10 @@ describe("harness HTTP API", () => {
       { timeout: 5_000 }).toBe("dispatched");
     } finally {
       rmSync(failureMarker, { force: true });
-      if (room) await api("POST", `/api/groups/${room.id}/interrupt`, {}).catch(() => undefined);
+      if (room) await stopFixtureGroup(room.id);
       await api("PATCH", "/api/config", { features: { browser: false }, browserProfiles: [] }).catch(() => undefined);
-      if (room) await api("DELETE", `/api/groups/${room.id}`).catch(() => undefined);
-      await api("DELETE", `/api/bots/${bot.id}`).catch(() => undefined);
+      if (room) expect((await api("DELETE", `/api/groups/${room.id}`)).status).toBe(200);
+      expect((await api("DELETE", `/api/bots/${bot.id}`)).status).toBe(200);
     }
   });
 
@@ -7166,11 +7173,11 @@ describe("harness HTTP API", () => {
       expect(system).not.toMatch(/never type their (?:credentials|password)/i);
       expect(system).not.toContain("At a sign-in, password, MFA, CAPTCHA");
     } finally {
-      if (room) await api("POST", `/api/groups/${room.id}/interrupt`, {}).catch(() => undefined);
+      if (room) await stopFixtureGroup(room.id);
       else await api("POST", `/api/bots/${bot.id}/interrupt`, {}).catch(() => undefined);
       await api("PATCH", "/api/config", { features: { browser: false }, browserProfiles: [] }).catch(() => undefined);
-      if (room) await api("DELETE", `/api/groups/${room.id}`).catch(() => undefined);
-      await api("DELETE", `/api/bots/${bot.id}`).catch(() => undefined);
+      if (room) expect((await api("DELETE", `/api/groups/${room.id}`)).status).toBe(200);
+      expect((await api("DELETE", `/api/bots/${bot.id}`)).status).toBe(200);
     }
   }, 60_000);
   it("reconciles a committed crash-stale bot reference before ACK and profile-id reuse", async () => {

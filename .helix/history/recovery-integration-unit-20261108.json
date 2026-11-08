@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 2,
+  "project": "SquadBots recovery integration",
+  "company": "SquadBots",
+  "artifactType": "macos-agent",
+  "icp": "Customers supervising AI teammates on their paired Mac",
+  "pain": "Silent browser streams leave stale controls and a fixture race obscures context recovery evidence",
+  "revenueHypothesis": "Trustworthy control recovery and reliable release evidence support paid teammate workflows",
+  "mvpAcceptance": [
+    "Combine the reviewed heartbeat and context-fixture changes without altering their behavior",
+    "Run the complete repository test sequence in a credential-free environment",
+    "Verify the real browser recovery fixture on the combined source",
+    "Publish a uniquely named draft branch and require live exact-head CI before acceptance",
+    "Use the original delivery verifier and independent controller evidence; do not represent blocked scans or missing checks as passed"
+  ],
+  "maker": "codex-root-integration",
+  "codingTool": "codex",
+  "rollback": "Revert only the integration commit or close the isolated draft branch; preserve both original reviewed commits and all customer data. No production deployment is part of this unit.",
+  "stopConditions": [
+    "Stop on a tool denial for that exact action; never bypass it through another credential",
+    "Stop on secret exposure, target ambiguity, an active duplicate, three failed attempts or 45 minutes",
+    "Keep production release blocked while security, identity or native distribution evidence is incomplete"
+  ],
+  "evidenceDestination": ".helix/evidence",
+  "executionEvidence": ".helix/evidence/execution.json",
+  "copySafety": {
+    "publicPatternSources": [],
+    "proprietaryAssetsExcluded": true
+  },
+  "limits": {
+    "maxMinutes": 45,
+    "maxAgents": 3,
+    "maxAttempts": 3
+  },
+  "github": {
+    "repo": "hythevc/OpenMausBot_Grok",
+    "remote": "origin",
+    "branch": "codex/recovery-integration-20261108",
+    "baseBranch": "main",
+    "commit": "HEAD"
+  },
+  "vercel": {
+    "mode": "not_applicable",
+    "category": "macos-agent",
+    "exceptionReason": "This unit verifies the Electron desktop browser-control renderer and native browser engine through disposable local fixtures. It does not deploy or certify the hosted SaaS product.",
+    "runtimeEvidence": ".helix/evidence/runtime.json",
+    "approvalEvidence": "controller://exception/squadbots-recovery-integration-20261108"
+  },
+  "verification": {
+    "checks": [
+      {
+        "name": "typecheck + lint",
+        "evidence": ".helix/evidence/check-static.json"
+      },
+      {
+        "name": "typecheck + test (ubuntu-latest)",
+        "evidence": ".helix/evidence/check-ubuntu.json"
+      },
+      {
+        "name": "typecheck + test (macos-latest)",
+        "evidence": ".helix/evidence/check-macos.json"
+      },
+      {
+        "name": "typecheck + test (windows-latest)",
+        "evidence": ".helix/evidence/check-windows.json"
+      }
+    ],
+    "checker": "squadbots_delivery_checker",
+    "checkerEvidence": "controller://checker/squadbots-recovery-integration-20261108"
+  },
+  "scopeRecord": {
+    "startedAt": "2026-11-08T21:00:24Z",
+    "deadlineAt": "2026-11-08T21:45:24Z",
+    "newSpendBudget": 0,
+    "priorCommits": [
+      "0c0fc8f7201069628cb9e4071ff1a2a57c05836e",
+      "d9a54294da83ee0df2963ed6916a279eb4e944f5"
+    ],
+    "historyPreservedIn": ".helix/history",
+    "priorPRListing": "Renewed request denied; no alternate read attempted. A new draft write is a separate authorized action."
+  }
+}
