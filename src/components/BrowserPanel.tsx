@@ -11,6 +11,7 @@ type ViewerFrame = BrowserFrame & { viewerId: string; generation: number };
 const button = "rounded-md p-1.5 text-ink-secondary hover:bg-inset hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed";
 const RECONNECT_DELAYS = [1_000, 2_000, 4_000, 8_000, 15_000];
 const RECONNECT_MESSAGE = "Connection interrupted. Reconnecting the browser view…";
+const HEARTBEAT_TIMEOUT_MS = 30_000;
 
 /** Closing a panel releases its lease. A new connection never silently
  * restores permission to type, and never replays old browser frames. */
@@ -71,11 +72,36 @@ export function LiveBrowser({ bot }: { bot: Bot }) {
     }
     let stopped = false;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let heartbeatTimer: ReturnType<typeof setTimeout> | undefined;
     viewer.current = ""; pendingOperation.current = null;
     urlEditing.current = false;
     setFrame(null); setTabs([]); setAddress(""); setConnected(false); setError("");
     setControl({ held: false, controlling: false, owned: false }); setPending(false);
     const source = new EventSource(`/api/bots/${bot.id}/browser/live`);
+    const disconnect = (message: string, retryable: boolean) => {
+      if (stopped || !ownsConnection()) return;
+      stopped = true;
+      clearTimeout(heartbeatTimer);
+      const delay = retryable ? RECONNECT_DELAYS[reconnectCount.current] : undefined;
+      if (delay !== undefined) {
+        reconnectCount.current++;
+        message = RECONNECT_MESSAGE;
+        reconnectTimer = setTimeout(() => {
+          if (!ownsConnection()) return;
+          // Reopen observation only, not browser commands or a human lease.
+          generation.current++;
+          setAttempt((value) => value + 1);
+        }, delay);
+      }
+      setError(message); setConnected(false); setFrame(null); setControl({ held: false, controlling: false, owned: false });
+      // Keep this generation alive: a successful restart closes its stream
+      // before the action reply arrives, and must still reconnect afterward.
+      viewer.current = ""; inputQueue.current?.clear(); inputQueue.current = null; source.close();
+    };
+    const expectHeartbeat = () => {
+      clearTimeout(heartbeatTimer);
+      heartbeatTimer = setTimeout(() => disconnect("Browser connection ended. Reconnect to continue watching.", true), HEARTBEAT_TIMEOUT_MS);
+    };
     const listen = (name: string, handler: (data: any) => void) => source.addEventListener(name, (event) => {
       if (stopped || !ownsConnection()) return;
       try { handler(JSON.parse((event as MessageEvent).data)); } catch { /* Malformed events are not rendered. */ }
@@ -87,10 +113,15 @@ export function LiveBrowser({ bot }: { bot: Bot }) {
         if (ownsConnection() && viewer.current === expected) await action(body, expected);
       }, (cause) => { if (ownsConnection() && viewer.current === expected) setError(cause instanceof Error ? cause.message : String(cause)); });
       setConnected(true);
+      expectHeartbeat();
     });
     // A ready event alone is not recovery: a flapping stream can open and
     // fail immediately. Reset the retry budget only after a live heartbeat.
-    listen("heartbeat", () => { reconnectCount.current = 0; });
+    listen("heartbeat", () => {
+      if (!viewer.current) return;
+      reconnectCount.current = 0;
+      expectHeartbeat();
+    });
     listen("frame", (data) => { if (viewer.current) setFrame({ ...data, viewerId: viewer.current, generation: current }); });
     listen("tabs", (data) => {
       setTabs(data.tabs);
@@ -109,7 +140,6 @@ export function LiveBrowser({ bot }: { bot: Bot }) {
       // A closed source may still deliver its queued error after a profile
       // switch or reconnect. It must not clear the replacement viewer/input.
       if (stopped || !ownsConnection()) return;
-      stopped = true;
       let message = "Browser connection ended. Reconnect to continue watching.";
       let retryable = !(event instanceof MessageEvent);
       if (event instanceof MessageEvent) {
@@ -119,25 +149,12 @@ export function LiveBrowser({ bot }: { bot: Bot }) {
           retryable = data.retryable === true;
         } catch { /* Malformed server errors require explicit reconnect. */ }
       }
-      const delay = retryable ? RECONNECT_DELAYS[reconnectCount.current] : undefined;
-      if (delay !== undefined) {
-        reconnectCount.current++;
-        message = RECONNECT_MESSAGE;
-        reconnectTimer = setTimeout(() => {
-          if (!ownsConnection()) return;
-          // Reopen observation only, not browser commands or a human lease.
-          generation.current++;
-          setAttempt((value) => value + 1);
-        }, delay);
-      }
-      setError(message); setConnected(false); setFrame(null); setControl({ held: false, controlling: false, owned: false });
-      // Keep this generation alive: a successful restart closes its stream
-      // before the action reply arrives, and must still reconnect afterward.
-      viewer.current = ""; inputQueue.current?.clear(); inputQueue.current = null; source.close();
+      disconnect(message, retryable);
     });
     return () => {
       stopped = true;
       clearTimeout(reconnectTimer);
+      clearTimeout(heartbeatTimer);
       if (ownsConnection()) {
         generation.current++; viewer.current = ""; pendingOperation.current = null;
         inputQueue.current?.clear(); inputQueue.current = null;
@@ -159,7 +176,7 @@ export function LiveBrowser({ bot }: { bot: Bot }) {
       await action(body, expected);
       if (generation.current === current && body.type === "restart") reconnect();
     }
-    catch (cause) { if (generation.current === current) setError(cause instanceof Error ? cause.message : String(cause)); }
+    catch (cause) { if (generation.current === current && viewer.current === expected) setError(cause instanceof Error ? cause.message : String(cause)); }
     finally {
       if (generation.current === current && pendingOperation.current === current) {
         pendingOperation.current = null; setPending(false);

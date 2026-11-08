@@ -27,6 +27,7 @@ export async function verifyBrowserRecovery(input: {
     return JSON.stringify(result);
   };
   const browser = await chromium.launch({ executablePath: input.executablePath, headless: true });
+  let releasePendingInput = () => {};
   try {
     await call("open", { url: input.testPage });
     await call("fill", { selector: "#name", text: "Preserved after idle" });
@@ -38,12 +39,40 @@ export async function verifyBrowserRecovery(input: {
 
     const page = await browser.newPage({ viewport: { width: 1280, height: 850 } });
     await page.addInitScript(() => {
+      const originalFetch = window.fetch.bind(window);
+      (window as any).fixtureInputRequests = [];
+      (window as any).fixtureInputConsumed = false;
+      window.fetch = async (resource, init) => {
+        const action = String(resource).endsWith("/browser/action") && typeof init?.body === "string"
+          ? JSON.parse(init.body) : null;
+        if (action?.type === "input_keyboard") (window as any).fixtureInputRequests.push(action.text);
+        const response = await originalFetch(resource, init);
+        if (action?.text === "Held fixture input") {
+          const readJson = response.json.bind(response);
+          response.json = async () => {
+            const body = await readJson();
+            (window as any).fixtureInputConsumed = true;
+            return body;
+          };
+        }
+        return response;
+      };
       const Original = window.EventSource;
       (window as any).fixtureSources = [];
       window.EventSource = class extends Original {
+        fixtureSilent = false;
+        fixtureHeartbeatCount = 0;
         constructor(url: string | URL, options?: EventSourceInit) {
           super(url, options);
-          if (String(url).endsWith("/browser/live")) (window as any).fixtureSources.push(this);
+          if (String(url).endsWith("/browser/live")) {
+            (window as any).fixtureSources.push(this);
+            for (const type of ["ready", "heartbeat", "frame", "tabs", "url", "status", "control", "error"]) {
+              this.addEventListener(type, (event) => {
+                if (this.fixtureSilent) event.stopImmediatePropagation();
+                else if (type === "heartbeat") this.fixtureHeartbeatCount++;
+              });
+            }
+          }
         }
       };
     });
@@ -71,6 +100,61 @@ export async function verifyBrowserRecovery(input: {
     assert.deepEqual(actions.slice(offset).filter((action) => action.type !== "ack"), []);
     await page.waitForFunction((url: string) => document.querySelector<HTMLInputElement>('input[aria-label="Browser address"]')?.value === url, input.testPage);
     console.log("PASS: real native preview reconnects automatically, retaining the page without replaying navigation or taking control.");
+
+    // Four real server heartbeats exceed the renderer's silence deadline.
+    // A static image is valid while its connection continues to report health.
+    await page.waitForFunction(() => (window as any).fixtureSources[1]?.fixtureHeartbeatCount >= 4, undefined, { timeout: 45_000 });
+    assert.equal(await page.evaluate(() => (window as any).fixtureSources.length), 2);
+    assert(await page.getByRole("img", { name: "Live bot browser" }).isVisible());
+    await page.screenshot({ path: input.screenshotPath.replace(/\.png$/, "-healthy.png") });
+    console.log("PASS: healthy heartbeats keep a static native browser view connected for more than 30 seconds.");
+
+    await page.getByRole("button", { name: "Take control", exact: true }).click();
+    await page.getByRole("button", { name: "Return to bot", exact: true }).waitFor();
+    const silenceOffset = actions.length;
+    const heldInput = new Promise<void>((resolve) => { releasePendingInput = resolve; });
+    let inputHeld = false;
+    await page.route("**/api/bots/*/browser/action", async (route: any) => {
+      const body = route.request().postDataJSON();
+      if (body.type === "input_keyboard" && body.text === "Held fixture input") {
+        inputHeld = true;
+        await heldInput;
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
+      } else await route.continue();
+    });
+    const typeThroughPanel = async (text: string) => {
+      await page.getByLabel("Browser menu", { exact: true }).click();
+      await page.getByRole("button", { name: "Type or paste text…", exact: true }).click();
+      await page.getByRole("textbox", { name: "Text for the page", exact: true }).fill(text);
+      await page.getByRole("button", { name: "Type", exact: true }).click();
+    };
+    await typeThroughPanel("Held fixture input");
+    await typeThroughPanel("Must not replay");
+    assert(inputHeld, "the first input must be in flight while the second waits in the real input queue");
+    assert.equal(actions.slice(silenceOffset).filter((action) => action.text === "Must not replay").length, 0);
+
+    // Suppress all delivery, including error events, on this real connection.
+    // Its only renderer recovery trigger is the production heartbeat deadline.
+    await page.evaluate(() => { (window as any).fixtureSources[1].fixtureSilent = true; });
+    await page.getByText("Connection interrupted. Reconnecting the browser view…").waitFor({ timeout: 35_000 });
+    assert.equal(await page.getByRole("img", { name: "Live bot browser" }).count(), 0);
+    assert(await page.getByRole("button", { name: "Take control", exact: true }).isDisabled());
+    assert(await page.getByRole("textbox", { name: "Browser address" }).getAttribute("readonly") !== null);
+    await page.screenshot({ path: input.screenshotPath.replace(/\.png$/, "-reconnecting.png") });
+    await page.waitForFunction(() => (window as any).fixtureSources.length === 3);
+    await page.getByRole("img", { name: "Live bot browser" }).waitFor({ timeout: 30_000 });
+    await page.getByRole("button", { name: "Take control", exact: true }).waitFor();
+    const lateInputResponse = page.waitForResponse((response: any) => response.url().endsWith("/browser/action") && response.request().postDataJSON()?.text === "Held fixture input");
+    releasePendingInput();
+    assert((await lateInputResponse).ok());
+    // Observe response consumption at the next rendering checkpoint, after
+    // the input queue's promise continuations have had a chance to dispatch.
+    await page.waitForFunction(() => (window as any).fixtureInputConsumed === true);
+    assert.deepEqual(await page.evaluate(() => (window as any).fixtureInputRequests), ["Held fixture input"]);
+    assert.deepEqual(actions.slice(silenceOffset).filter((action) => action.type !== "ack").map((action) => action.text), ["Held fixture input"]);
+    assert(await page.getByRole("textbox", { name: "Browser address" }).getAttribute("readonly") !== null);
+    await page.waitForFunction((url: string) => document.querySelector<HTMLInputElement>('input[aria-label="Browser address"]')?.value === url, input.testPage);
+    console.log("PASS: heartbeat silence clears the stale frame and control, reconnects watch-only, and discards queued input after a late response.");
     for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: 850 });
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
@@ -84,6 +168,7 @@ export async function verifyBrowserRecovery(input: {
     assert.match(await call("get_text", { selector: "#result" }), /Hello, Preserved after idle/);
     console.log("PASS: the same live document and unsaved form survive 65 seconds idle; the next agent tool call completes.");
   } finally {
+    releasePendingInput();
     await browser.close();
     try { await promisify(execFile)(input.binaryPath, ["close"], { env, timeout: 15_000 }); }
     finally { await runtime.closeAll(); }

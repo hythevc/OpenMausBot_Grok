@@ -44,6 +44,11 @@ UI and harness, then removes its temporary data; the server log remains.
 7. Reconnect while a restart is still finishing, or change profiles before an
    earlier command finishes. A late response must not disconnect the new view,
    change its error state, or acknowledge an old frame as the new viewer.
+8. After the connection is ready, interrupt all incoming stream events without
+   sending an error. After 30 seconds without a heartbeat, the panel must clear
+   its old frame and human control, discard queued input, and reconnect in
+   watch-only mode. Healthy heartbeats keep a static image connected. Repeated
+   silent connections use the existing five-retry limit, then show Reconnect.
 
 Focused automated coverage:
 
@@ -86,6 +91,19 @@ preview screenshot is retained beside the fixture log.
 The runtime regression also models a browser descendant that must outlive its
 MCP parent, including an MCP parent that ignores EOF. Run those tests on Windows
 as well: native macOS acceptance alone does not prove Windows process behavior.
+
+The same recovery smoke also waits for four real server heartbeats, then
+suppresses delivery on one EventSource, including error events. It checks the
+production 30-second deadline, cleared frame, disabled controls and a new
+watch-only viewer. A synthetic held input response keeps a second input in the
+real renderer queue; releasing the old response after reconnect must not send
+that queued input. Both input strings are test fixtures, and the held input is
+never forwarded to the browser. This tests transport silence and queue cleanup;
+it does not establish the outcome of an action already accepted by a provider.
+
+The heartbeat deadline begins at `ready`, so slow native startup keeps its
+existing timeout policy. Browser timers require a running renderer; physical
+Mac sleep and operating-system suspension need separate device testing.
 
 ### Lifecycle references
 
