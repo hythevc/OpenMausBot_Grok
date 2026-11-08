@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 2,
+  "project": "SquadBots browser observation recovery",
+  "artifactType": "desktop-client-recovery",
+  "codingTool": "Codex",
+  "icp": "People supervising AI teammates using their paired computer",
+  "buyerPain": "A silent browser stream can leave a stale screen and controls presented as connected",
+  "revenueHypothesis": "Honest connection status and safe recovery improve trust in paid computer workflows",
+  "objective": "Expire silent browser observations and recover in watch-only mode without replaying actions",
+  "acceptanceCriteria": [
+    "A 30-second heartbeat silence invalidates the current browser viewer and clears stale frame, control and queued input",
+    "Healthy heartbeats renew the deadline",
+    "Late timers or messages from replaced sessions and profiles cannot affect the current viewer",
+    "Recovery reuses existing bounded reconnect and remains watch-only without navigation or action replay",
+    "Focused regression tests, type checks and isolated runtime smoke verify the real Browser panel",
+    "Independent standards and specification review",
+    "Security and delivery gates reported without treating unavailable verification as a pass"
+  ],
+  "canonicalGitHub": {
+    "repo": "hythevc/OpenMausBot_Grok",
+    "requestedAlias": "jaimedhenriques/OpenMausBot_Grok",
+    "branch": "codex/browser-heartbeat-recovery-20261108",
+    "baseCommit": "1bb1bc4dd23f07df8b5dd7d96a81204532a13b97",
+    "published": false
+  },
+  "maker": "squadbots_behavior_builder",
+  "checker": "independent standards and spec reviewers",
+  "caps": {
+    "minutes": 45,
+    "attempts": 3,
+    "activeRoles": 3,
+    "spend": 0
+  },
+  "startedAt": "2026-11-08T20:12:28Z",
+  "deadlineAt": "2026-11-08T20:57:28Z",
+  "rollback": "Revert the scoped recovery commit; no data migration, live account change or production deployment",
+  "evidence": "../squadbots-browser-recovery-evidence-20261108",
+  "vercel": {
+    "mode": "not_applicable",
+    "technicalExceptionCategory": "macos-agent",
+    "reason": "This unit changes the existing desktop Browser panel and proves it with disposable local runtime fixtures. It does not deploy or claim acceptance of the hosted SaaS surface."
+  },
+  "stopCondition": "Finish the finite verified slice or preserve a precise dependency; no unchanged retry, competitor source access, real-user fixture, new scheduler or production action",
+  "permissions": {
+    "allowed": [
+      "isolated local implementation",
+      "locked dependency setup without lifecycle hooks",
+      "synthetic local tests",
+      "independent review"
+    ],
+    "blockedReads": [
+      "open PR listing denied; renewed permission requested"
+    ],
+    "forbidden": [
+      "competitor source supplied to builder",
+      "live-user data tests",
+      "messages or external effects through bots",
+      "production deployment in this unit"
+    ]
+  },
+  "deliveryStatus": "implemented and independently reviewed locally; publication, DAST and delivery gate pending",
+  "verification": {
+    "componentTests": 30,
+    "independentRelatedTests": 96,
+    "controllerNativeSmoke": "exit 0; complete logs; fixture cleanup verified",
+    "typecheck": "passed",
+    "scopedLint": "passed",
+    "build": "passed with existing large-chunk warning",
+    "brokerTests": 9,
+    "electronNodeTests": {
+      "passed": 347,
+      "skipped": 3,
+      "failed": 0
+    },
+    "packagedServerSmoke": "passed",
+    "secretScan": "Gitleaks 8.30.1 passed scoped diff and manifest",
+    "broadVitest": "running; final changed files separately reverified",
+    "dast": "blocked: StackHawk platform returned HTTP 402 Payment Required",
+    "deliveryGate": "blocked: configured verifier missing, exit 2",
+    "reviewedDiffSha256": "39acf6302cc9fcfb5b8dbd802ff93b83576be8fead15a055940ce24675a0953c"
+  }
+}
