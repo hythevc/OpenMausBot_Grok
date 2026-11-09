@@ -28,6 +28,7 @@ concurrency:
 
 jobs:
   prepare:
+    if: github.repository == 'hythevc/OpenMausBot_Grok'
     name: Open the version-bump PR
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -75,10 +76,6 @@ jobs:
         run: |
           if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             echo "::error::v$VERSION already exists in $GITHUB_REPOSITORY"
-            exit 1
-          fi
-          if gh release view "v$VERSION" --repo milind-soni/openmausbot-releases > /dev/null 2>&1; then
-            echo "::error::v$VERSION already exists in the legacy updater mirror"
             exit 1
           fi
           if git ls-remote --exit-code --heads origin "release/v$VERSION" > /dev/null 2>&1; then

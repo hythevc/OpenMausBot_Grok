@@ -1,34 +1,35 @@
 {
   "schemaVersion": 2,
-  "project": "SquadBots CI fixture cleanup",
+  "project": "SquadBots owned native release identity",
   "company": "SquadBots",
   "artifactType": "macos-agent",
-  "icp": "Customers supervising AI teammates on their paired Mac",
-  "pain": "Shared API fixtures leave active channel owners behind after rejected cleanup, contaminating later CI assertions",
-  "revenueHypothesis": "Trustworthy control recovery and reliable release evidence support paid teammate workflows",
+  "icp": "Verified customers supervising AI teammates on their paired Mac and iPhone",
+  "pain": "Native packaging and release automation still target upstream identities and unresolved service authority",
+  "revenueHypothesis": "Owned distribution and explicit release stops protect customers while account integrations are completed",
   "mvpAcceptance": [
-    "Preserve all production guards and test assertions",
-    "Deterministically settle exact fixture-owned work and verify cleanup success",
-    "Run affected API tests and the combined complete suite with clean credentials-free test environments",
-    "Publish reviewed changes to the existing draft PR and require exact-head CI",
-    "Preserve earlier evidence and blocked DAST/account requirements without declaring launch readiness"
+    "Use SquadBots display and verified ai.squadbots.app native identity",
+    "Use only canonical hythevc/OpenMausBot_Grok for desktop release destinations",
+    "Prevent registry, upstream mirror and website publication as release side effects",
+    "Preserve signatures, notarization, artifact digests and technical compatibility identifiers",
+    "Fail native distribution closed while compatible owned services remain unresolved",
+    "Run bounded clean-environment contract checks and independent review before commit"
   ],
-  "maker": "ci_fixture_fix",
+  "maker": "authority_recovery",
   "codingTool": "codex",
-  "rollback": "Revert only the integration commit or close the isolated draft branch; preserve both original reviewed commits and all customer data. No production deployment is part of this unit.",
+  "rollback": "Revert only this isolated source diff; no production resources, installed apps or credentials changed",
   "stopConditions": [
-    "Stop on a tool denial for that exact action; never bypass it through another credential",
-    "Stop on secret exposure, target ambiguity, an active duplicate, three failed attempts or 30 minutes",
-    "Keep production release blocked while security, identity or native distribution evidence is incomplete"
+    "Stop on secret exposure, target ambiguity, duplicate ownership, three failed attempts or deadline",
+    "Do not commit or push before independent source review",
+    "Do not deploy, change credentials, install dependencies or bypass unresolved service release stops"
   ],
-  "evidenceDestination": ".helix/evidence/ci-cleanup",
-  "executionEvidence": ".helix/evidence/ci-cleanup/execution.json",
+  "evidenceDestination": ".helix/evidence/owned-release",
+  "executionEvidence": ".helix/evidence/owned-release/execution.json",
   "copySafety": {
     "publicPatternSources": [],
     "proprietaryAssetsExcluded": true
   },
   "limits": {
-    "maxMinutes": 30,
+    "maxMinutes": 36,
     "maxAgents": 3,
     "maxAttempts": 3
   },
@@ -36,50 +37,38 @@
     "repo": "hythevc/OpenMausBot_Grok",
     "remote": "origin",
     "branch": "codex/recovery-integration-20261108",
-    "baseBranch": "main",
+    "baseBranch": "codex/recovery-integration-20261108",
     "commit": "HEAD"
   },
   "vercel": {
     "mode": "not_applicable",
     "category": "macos-agent",
-    "exceptionReason": "This unit repairs disposable local API test fixtures for the desktop agent runtime. Vercel cannot execute this process/browser harness and would not prove CI cleanup. It does not deploy or certify the hosted SaaS product.",
-    "runtimeEvidence": ".helix/evidence/ci-cleanup/runtime.json",
-    "approvalEvidence": "controller://exception/squadbots-ci-cleanup-20261108"
+    "exceptionReason": "Local native packaging and release-automation identity only; no web deployment, customer-path or public-distribution claim",
+    "runtimeEvidence": ".helix/evidence/owned-release/runtime.json",
+    "approvalEvidence": "controller://exception/squadbots-owned-release-20261109"
   },
   "verification": {
-    "checks": [
-      {
-        "name": "typecheck + lint",
-        "evidence": ".helix/evidence/ci-cleanup/check-static.json"
-      },
-      {
-        "name": "typecheck + test (ubuntu-latest)",
-        "evidence": ".helix/evidence/ci-cleanup/check-ubuntu.json"
-      },
-      {
-        "name": "typecheck + test (macos-latest)",
-        "evidence": ".helix/evidence/ci-cleanup/check-macos.json"
-      },
-      {
-        "name": "typecheck + test (windows-latest)",
-        "evidence": ".helix/evidence/ci-cleanup/check-windows.json"
-      }
-    ],
-    "checker": "squadbots_delivery_checker",
-    "checkerEvidence": "controller://checker/squadbots-ci-cleanup-20261108"
+    "checks": [],
+    "checker": "native_release_readiness",
+    "checkerEvidence": "controller://checker/squadbots-owned-release-20261109"
   },
   "scopeRecord": {
-    "startedAt": "2026-11-08T21:46:15.734945+00:00",
-    "deadlineAt": "2026-11-08T22:15:00Z",
+    "startedAt": "2026-11-09T21:22:00Z",
+    "deadlineAt": "2026-11-09T21:58:00Z",
     "newSpendBudget": 0,
-    "inputCommit": "004a04dc06cadba1c2dbbac024619ca86c347769",
-    "priorUnit": "First unit retained as partial; this unit addresses the newly proven fixture cleanup failure",
+    "inputCommit": "f8e3d3ff5727f53066ec7b7d572aff6e2a3cc884",
     "roles": [
-      "root-integration",
-      "ci_fixture_fix",
-      "squadbots_delivery_checker"
+      "root",
+      "authority_recovery",
+      "native_release_readiness"
     ],
-    "causeEvidence": ".helix/evidence/successor-fixture-findings.txt",
-    "priorPRListing": "Denied; no bypass. Continue the already-created draftPR12."
+    "approvedIdentity": {
+      "team": "4QGB5QX6RN",
+      "bundle": "ai.squadbots.app",
+      "appGroup": "group.ai.squadbots.app"
+    },
+    "testEnvironment": "Only PATH,TMPDIR,LANG and explicit nonsecret fixtures",
+    "makerBranch": "codex/owned-release-20261109",
+    "gatingDecision": "Root explicitly narrowed gate to production release workflow and iOS archive/Release-device distribution; keep CI package/security smokes and normal isolated unsigned packaging verification intact. No environment bypass."
   }
 }

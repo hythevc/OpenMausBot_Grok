@@ -3,7 +3,7 @@
 // own. `npx openmausbot serve` then needs Node 24+ and nothing else.
 //
 //   pnpm build:server && pnpm exec vite build && node scripts/build-npm-package.mjs
-//   cd release/npm && npm pack        # or npm publish --access public
+//   cd release/npm && npm pack        # local compatibility artifact only
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,6 +36,7 @@ if (existsSync(enterpriseBundle)) {
   }
 }
 cpSync(join(root, "LICENSE"), join(out, "LICENSE"));
+cpSync(join(root, "NOTICE"), join(out, "NOTICE"));
 
 // The bin lives next to the bundle so serverEntry() finds index.js by path.
 writeFileSync(join(out, "cli.js"), `#!/usr/bin/env node\nimport "./dist-server/openmausbot.js";\n`);
@@ -45,15 +46,16 @@ writeFileSync(
   JSON.stringify(
     {
       name: "openmausbot",
+      private: true,
       version: app.version,
-      description: "Run the OpenMausBot server anywhere and pair your devices to it",
+      description: "SquadBots local compatibility server",
       license: "Apache-2.0",
       type: "module",
       bin: { openmausbot: "cli.js" },
-      files: ["cli.js", "dist-server", "dist", "skills", "enterprise", "LICENSE", "README.md"],
+      files: ["cli.js", "dist-server", "dist", "skills", "enterprise", "LICENSE", "NOTICE", "README.md"],
       engines: { node: ">=24" },
-      repository: { type: "git", url: "https://github.com/milind-soni/OpenMausBot.git" },
-      homepage: "https://github.com/milind-soni/OpenMausBot#readme",
+      repository: { type: "git", url: "https://github.com/hythevc/OpenMausBot_Grok.git" },
+      homepage: "https://github.com/hythevc/OpenMausBot_Grok#readme",
       keywords: ["openmausbot", "agents", "self-hosted", "server"],
     },
     null,
@@ -68,11 +70,11 @@ writeFileSync(
 Your own team of AI bots, with guided terminal setup. Requires Node 24+.
 
 \`\`\`sh
-npm install -g openmausbot
+npm install -g ./openmausbot-${app.version}.tgz
 openmausbot
 \`\`\`
 
-Or run \`npx openmausbot\` without a global install. Use the same command next
+This private compatibility package is not published to npm. Use the same command next
 time; \`openmausbot start\` is an alias for the bare command.
 
 First launch: use arrow keys and Enter (numbered choices in plain terminals) to choose
@@ -139,8 +141,8 @@ For a service, use \`serve --tunnel\` after \`login\` for managed HTTPS,
 \`login\` command signs in to an OpenMausBot account, not an AI provider;
 it does not start the tunnel itself.
 
-[Setup guide](https://github.com/milind-soni/OpenMausBot/blob/main/docs/cli-onboarding.md)
-· [Hosting guide](https://github.com/milind-soni/OpenMausBot/blob/main/docs/self-hosting.md)
+[Setup guide](https://github.com/hythevc/OpenMausBot_Grok/blob/main/docs/cli-onboarding.md)
+· [Hosting guide](https://github.com/hythevc/OpenMausBot_Grok/blob/main/docs/self-hosting.md)
 `,
 );
 console.log(`npm package assembled at ${out} (openmausbot@${app.version})`);

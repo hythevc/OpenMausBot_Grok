@@ -9,7 +9,7 @@
 # package — the Info.plist keys below are the part that is easy to miss.
 name: OpenMausCompanion
 options:
-  bundleIdPrefix: com.openmausbot
+  bundleIdPrefix: ai.squadbots
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
@@ -42,9 +42,14 @@ targets:
         product: CompanionCore
       - target: OpenMausCompanionWidgets
       - target: OpenMausShareExtension
+    preBuildScripts:
+      - name: Verify owned release readiness
+        script: /bin/sh "$SRCROOT/../scripts/check-owned-ios-release.sh"
+        basedOnDependencyAnalysis: false
+        showEnvVars: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.openmausbot.app
+        PRODUCT_BUNDLE_IDENTIFIER: ai.squadbots.app
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "6"
         SWIFT_VERSION: "5.9"
@@ -55,22 +60,22 @@ targets:
       path: App/OpenMausCompanion.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.openmausbot.shared
+          - group.ai.squadbots.app
         keychain-access-groups:
-          - $(AppIdentifierPrefix)com.openmausbot.app
-          - $(AppIdentifierPrefix)group.com.openmausbot.shared
+          - $(AppIdentifierPrefix)ai.squadbots.app
+          - $(AppIdentifierPrefix)group.ai.squadbots.app
     info:
       path: App/Info.plist
       properties:
         # What appears under the icon. Distinct from the desktop app on
         # purpose: someone may well have both, and two identical labels on
         # one person's devices is a small cruelty.
-        CFBundleDisplayName: OpenMausMobile
+        CFBundleDisplayName: SquadBots
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.productivity
         ITSAppUsesNonExemptEncryption: false
-        OpenMausKeychainAccessGroup: $(AppIdentifierPrefix)group.com.openmausbot.shared
+        OpenMausKeychainAccessGroup: $(AppIdentifierPrefix)group.ai.squadbots.app
         # The bot's Live Activity — its face and ask in the Dynamic Island
         # and on the lock screen.
         NSSupportsLiveActivities: true
@@ -100,15 +105,15 @@ targets:
         # It looks exactly like "no computers on this network", which is a
         # confusing hour if you don't know to look here.
         NSLocalNetworkUsageDescription: >-
-          OpenMausBot finds your computer on this network so your bots can
+          SquadBots finds your computer on this network so your bots can
           reach you here.
         NSCameraUsageDescription: >-
-          OpenMausBot uses the camera only to scan a pairing QR code shown on
+          SquadBots uses the camera only to scan a pairing QR code shown on
           your computer.
         NSMicrophoneUsageDescription: >-
-          OpenMausMobile listens while you dictate a message to a bot.
+          SquadBots listens while you dictate a message to a bot.
         NSSpeechRecognitionUsageDescription: >-
-          OpenMausMobile converts your speech into text so you can send it
+          SquadBots converts your speech into text so you can send it
           to a bot. Recognition runs on this phone when it can.
         NSBonjourServices:
           - _openmausbot._tcp
@@ -139,9 +144,14 @@ targets:
       - path: UITests
     dependencies:
       - target: OpenMausCompanion
+    preBuildScripts:
+      - name: Verify owned release readiness
+        script: /bin/sh "$SRCROOT/../scripts/check-owned-ios-release.sh"
+        basedOnDependencyAnalysis: false
+        showEnvVars: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.openmausbot.app.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: ai.squadbots.app.uitests
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
@@ -160,9 +170,14 @@ targets:
     dependencies:
       - package: CompanionCore
         product: CompanionCore
+    preBuildScripts:
+      - name: Verify owned release readiness
+        script: /bin/sh "$SRCROOT/../scripts/check-owned-ios-release.sh"
+        basedOnDependencyAnalysis: false
+        showEnvVars: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.openmausbot.app.share
+        PRODUCT_BUNDLE_IDENTIFIER: ai.squadbots.app.share
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "6"
         SWIFT_VERSION: "5.9"
@@ -173,16 +188,16 @@ targets:
       path: ShareExtension/OpenMausShareExtension.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.openmausbot.shared
+          - group.ai.squadbots.app
         keychain-access-groups:
-          - $(AppIdentifierPrefix)group.com.openmausbot.shared
+          - $(AppIdentifierPrefix)group.ai.squadbots.app
     info:
       path: ShareExtension/Info.plist
       properties:
-        CFBundleDisplayName: OpenMausBot
+        CFBundleDisplayName: SquadBots
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        OpenMausKeychainAccessGroup: $(AppIdentifierPrefix)group.com.openmausbot.shared
+        OpenMausKeychainAccessGroup: $(AppIdentifierPrefix)group.ai.squadbots.app
         # ATS is evaluated for URLSession work performed by the extension too.
         # Mirror the containing app's narrow local/Tailscale exceptions so a
         # share can reach the same already-paired routes. Local-network privacy
@@ -220,9 +235,14 @@ targets:
       # drawing with the app, so it has to share the catalog too.
       - package: CompanionCore
         product: CompanionCore
+    preBuildScripts:
+      - name: Verify owned release readiness
+        script: /bin/sh "$SRCROOT/../scripts/check-owned-ios-release.sh"
+        basedOnDependencyAnalysis: false
+        showEnvVars: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.openmausbot.app.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: ai.squadbots.app.widgets
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "6"
         SWIFT_VERSION: "5.9"
@@ -231,7 +251,7 @@ targets:
     info:
       path: Widgets/Info.plist
       properties:
-        CFBundleDisplayName: OpenMausMobile
+        CFBundleDisplayName: SquadBots
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
