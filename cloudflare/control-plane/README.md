@@ -184,3 +184,23 @@ only its tunnel connector token, which can run that one remotely managed tunnel.
 The public companion service still enforces its own pairing and application
 authentication; the tunnel is transport, not user authentication. This control
 plane does not collect marketing consent.
+
+
+## Better Auth 1.7.7 dependency upgrade
+
+The patched library no longer writes the `account.issuer` column introduced in
+1.7.0–1.7.2. New migration `0006_better_auth_1_7_3_account_identity.sql` follows
+the [official upgrade guide](https://better-auth.com/docs/guides/1-7-upgrade-guide).
+It preserves existing issuer values in `account_legacy_issuers`, keyed by the
+unchanged local account row ID, before dropping the obsolete required column.
+It also rejects duplicate `(providerId, accountId)` pairs with a unique index;
+operators must reconcile duplicates without combining different users.
+
+Back up D1 and inspect duplicate provider keys before any deployment. Pause auth
+traffic and background writes, apply the new migration and compatible Worker,
+then restart every instance before resuming traffic. Do not roll the application back
+to 1.7.1 without a separately reviewed reverse migration: new account rows have
+no historical issuer. Existing account IDs, credentials, users and sessions are
+preserved; the archive is deleted with its owning account. Local SQLite fixtures
+and workerd tests verify this change. No production migration or account login is
+proved by those tests.

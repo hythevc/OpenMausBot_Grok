@@ -939,7 +939,7 @@ it("gives a delegate_bot source today's fresh session and replay when its soul c
       { tool: "delegate_bot", arguments: { bot_id: f.qa.id, message: "Check the quality: QA_SOUL_TOKEN" } },
       { tool: "delegate_bot", arguments: { bot_id: f.ops.id, message: "Check operations: OPS_SOUL_TOKEN" } },
     ], reply: "Delegated" },
-    { reply: "First reply folded in", gateFile: f.gate("revival") },
+    { progress: "REVIVAL_SYSTEM_CAPTURED", reply: "First reply folded in", gateFile: f.gate("revival") },
     { reply: "Second reply folded in" },
   ] };
   f.save();
@@ -953,11 +953,14 @@ it("gives a delegate_bot source today's fresh session and replay when its soul c
   // The first reply wakes the source; the second lands while that turn holds.
   const replies = async () => (await f.messages(threadId)).filter((m: any) => /^@(QA|Ops) replied to the delegated task/.test(m.text ?? "")).length;
   await expect.poll(replies, { timeout: 30_000 }).toBe(2);
+  // Replies can arrive during setup, before the revival captures its system.
+  await expect.poll(async () => (await f.messages(threadId)).some((m: any) => m.role === "bot" && m.text === "REVIVAL_SYSTEM_CAPTURED"), { timeout: 15_000 }).toBe(true);
   await f.api(`/api/bots/${f.chief.id}`, { soul: "PEER_SOUL_MARK Always answer in German." }, "PATCH");
   f.open(f.gate("revival"));
   await expect.poll(() => f.turns().length, { timeout: 30_000 }).toBe(3);
 
   const [, first, third] = f.turns();
+  expect(first.system).not.toContain("PEER_SOUL_MARK");
   const late = count(f.prompt(first), "QA_SOUL_TOKEN") ? "OPS_SOUL_TOKEN" : "QA_SOUL_TOKEN";
   expect(third.system).toContain("PEER_SOUL_MARK");
   expect(f.launches().at(-1).resume).toBeNull();

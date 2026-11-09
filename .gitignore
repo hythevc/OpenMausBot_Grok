@@ -40,3 +40,6 @@ deploy/podman/.env
 deploy/podman/.env.*
 !deploy/podman/.env.example
 /.env
+
+# Local verification evidence is bound to commits outside source control.
+.helix/evidence/

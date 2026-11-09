@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 2,
+  "project": "SquadBots dependency security remediation",
+  "company": "SquadBots",
+  "artifactType": "macos-agent",
+  "icp": "Verified customers supervising AI teammates on their paired Mac and iPhone",
+  "pain": "Known critical and high advisories remain in native, renderer, docs and account-control-plane dependencies",
+  "revenueHypothesis": "Patched compatible dependencies and repeatable checks reduce preventable release and customer-risk blockers",
+  "mvpAcceptance": [
+    "Update vulnerable dependencies within compatible existing major versions",
+    "Use scoped overrides only for affected transitive ranges; never suppress advisories",
+    "Install exact lockfile with verified pnpm10.33.0, scripts disabled, own external store/cache",
+    "Native audit has zero critical/high findings or a precise evidence-backed residual",
+    "Targeted control-plane/auth/renderer checks and full11stage verification pass on final candidate",
+    "Independent source review before commit and exact published-commit checks before acceptance",
+    "Final acceptance includes inherited owned identity, native metadata, publication guards and dependency changes against required exact-head CI"
+  ],
+  "maker": "authority_recovery",
+  "codingTool": "codex",
+  "rollback": "Revert only this dependency unit commit; preserve prior release identity and financial/user state",
+  "stopConditions": [
+    "Stop on three failed repair attempts, deadline, secret exposure or necessary incompatible major upgrade without further scope",
+    "Never suppress audit, weaken tests, deploy or change credentials",
+    "Do not commit before independent source review"
+  ],
+  "evidenceDestination": ".helix/evidence/dependency-security",
+  "executionEvidence": ".helix/evidence/dependency-security/execution.json",
+  "copySafety": {
+    "publicPatternSources": [],
+    "proprietaryAssetsExcluded": true
+  },
+  "limits": {
+    "maxMinutes": 45,
+    "maxAgents": 3,
+    "maxAttempts": 3
+  },
+  "github": {
+    "repo": "hythevc/OpenMausBot_Grok",
+    "remote": "origin",
+    "branch": "codex/recovery-integration-20261108",
+    "baseBranch": "main",
+    "commit": "HEAD"
+  },
+  "vercel": {
+    "mode": "not_applicable",
+    "category": "macos-agent",
+    "exceptionReason": "Native/CLI dependency repair with local API and packaging proof; no hosted application or service deployment claim",
+    "runtimeEvidence": ".helix/evidence/dependency-security/runtime.json",
+    "approvalEvidence": "controller://exception/squadbots-dependency-security-20261109"
+  },
+  "verification": {
+    "checks": [
+      {
+        "name": "typecheck + lint",
+        "evidence": ".helix/evidence/dependency-security/check-static.json"
+      },
+      {
+        "name": "Swift tests + iOS build + thread UI",
+        "evidence": ".helix/evidence/dependency-security/check-ios.json"
+      },
+      {
+        "name": "package + smoke (Ubuntu 24.04 x64)",
+        "evidence": ".helix/evidence/dependency-security/check-linux-package.json"
+      },
+      {
+        "name": "typecheck + test (ubuntu-latest)",
+        "evidence": ".helix/evidence/dependency-security/check-ubuntu.json"
+      },
+      {
+        "name": "typecheck + test (macos-latest)",
+        "evidence": ".helix/evidence/dependency-security/check-macos.json"
+      },
+      {
+        "name": "typecheck + test (windows-latest)",
+        "evidence": ".helix/evidence/dependency-security/check-windows.json"
+      },
+      {
+        "name": "control-plane check + workerd tests + dry run",
+        "evidence": ".helix/evidence/dependency-security/check-control-plane.json"
+      },
+      {
+        "name": "Build, typecheck, and lint",
+        "evidence": ".helix/evidence/dependency-security/check-docs.json"
+      }
+    ],
+    "checker": "native_release_readiness",
+    "checkerEvidence": "controller://checker/squadbots-dependency-security-20261109"
+  },
+  "scopeRecord": {
+    "startedAt": "2026-11-09T21:39:45Z",
+    "deadlineAt": "2026-11-09T22:25:00Z",
+    "newSpendBudget": 0,
+    "inputCommit": "bde065d1f140144e6fb6d2f7084c7aafa2446425",
+    "makerBranch": "codex/dependency-security-20261109",
+    "roles": [
+      "root",
+      "authority_recovery",
+      "native_release_readiness"
+    ],
+    "baselineAudit": {
+      "critical": 7,
+      "high": 46,
+      "moderate": 38,
+      "low": 16
+    },
+    "toolchain": {
+      "node": "24.22.1",
+      "pnpm": "10.33.0"
+    },
+    "installScripts": "disabled initially; exact local source review required before any necessary binary validation",
+    "DAST": "Blocked by provider402; no scan or security-clearance claim",
+    "preflightOrdering": "Manifest existed before edits, but empty-check defect inherited from prior identity unit was corrected after package edits/install had started. Original preflight then run; no prior delivery acceptance claimed.",
+    "supersedesIncompleteUnit": "bde065d1 identity source locally reviewed/committed/pushed; its delivery manifest failed preflight. This combined unit preserves history and requires inherited identity plus security CI evidence."
+  }
+}

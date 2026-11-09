@@ -70,9 +70,9 @@ try {
     stdio: "inherit",
   });
   for (const directory of [
-    "/opt/OpenMausBot",
-    "/opt/OpenMausBot/resources",
-    "/opt/OpenMausBot/resources/cua-linux-x64",
+    "/opt/SquadBots",
+    "/opt/SquadBots/resources",
+    "/opt/SquadBots/resources/cua-linux-x64",
   ]) {
     const details = fs.lstatSync(directory);
     if (!details.isDirectory() || details.isSymbolicLink()) fail(`unsafe upgraded directory: ${directory}`);
@@ -81,14 +81,14 @@ try {
     }
   }
   for (const executable of ["cua-driver", "cua-cursor-theme"]) {
-    const file = path.join("/opt/OpenMausBot/resources/cua-linux-x64", executable);
+    const file = path.join("/opt/SquadBots/resources/cua-linux-x64", executable);
     const details = fs.lstatSync(file);
     if (!details.isFile() || details.isSymbolicLink()) fail(`unsafe upgraded executable: ${file}`);
     if (details.uid !== 0 || details.gid !== 0 || (details.mode & 0o777) !== 0o755) {
       fail(`upgraded executable is not root:root 0755: ${file}`);
     }
   }
-  const chromiumSandbox = "/opt/OpenMausBot/chrome-sandbox";
+  const chromiumSandbox = "/opt/SquadBots/chrome-sandbox";
   const sandboxDetails = fs.lstatSync(chromiumSandbox);
   if (!sandboxDetails.isFile() || sandboxDetails.isSymbolicLink()) {
     fail(`unsafe upgraded Chromium sandbox: ${chromiumSandbox}`);
@@ -104,7 +104,7 @@ try {
     encoding: "utf8",
   }).trim();
   console.log(
-    `[smoke-deb-upgrade] OK: 0.1.7 legacy modes repaired by ${installedVersion} without weakening the runtime path`,
+    `[smoke-deb-upgrade] OK: ${installedVersion} owns secure new paths after the 0.1.7 package fixture; user-data migration was not tested`,
   );
 } finally {
   fs.rmSync(temporary, { recursive: true, force: true });

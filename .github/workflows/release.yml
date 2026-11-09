@@ -1,7 +1,7 @@
 # One-button releases: builds macOS (arm64 + x64, signed, notarized, stapled),
 # Windows, and Ubuntu from ONE commit, assembles a complete draft in this
-# repository with verified feeds, and mirrors it to the legacy releases repo
-# so already-installed builds can cross the updater migration safely.
+# owned repository with verified feeds. Distribution remains blocked until
+# docs/squadbots-owned-release.md has compatible service and migration evidence.
 #
 # Every gate below exists because its absence shipped (or nearly shipped) a
 # broken build from a laptop:
@@ -43,6 +43,7 @@ permissions:
 
 jobs:
   prepare:
+    if: github.repository == 'hythevc/OpenMausBot_Grok'
     name: Pin the release commit
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -56,6 +57,8 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
           fetch-depth: 0
+      - name: Verify owned release readiness
+        run: node scripts/check-owned-release.mjs
       - id: pin
         env:
           BEFORE: ${{ github.event.before }}
@@ -86,18 +89,6 @@ jobs:
             echo "::error::$v is already published on $GITHUB_REPOSITORY — bump the version first"
             exit 1
           fi
-      - name: Refuse to overwrite a published legacy mirror
-        if: steps.pin.outputs.should_release == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.RELEASES_PAT }}
-        run: |
-          test -n "$GH_TOKEN" || { echo "::error::RELEASES_PAT is required for the updater bridge"; exit 1; }
-          v="v$(node -p "require('./package.json').version")"
-          if gh release view "$v" --repo milind-soni/openmausbot-releases --json isDraft --jq .isDraft 2>/dev/null | grep -q false; then
-            echo "::error::$v is already published on the legacy mirror — recover the canonical draft instead of rebuilding bytes"
-            exit 1
-          fi
-
   mac:
     name: macOS arm64 + x64 (sign, notarize, staple)
     needs: prepare
@@ -140,16 +131,16 @@ jobs:
 
       - name: "Gate: both packaged apps use the canonical updater feed"
         run: |
-          for app in release/mac-arm64/OpenMausBot.app release/mac/OpenMausBot.app; do
+          for app in release/mac-arm64/SquadBots.app release/mac/SquadBots.app; do
             update="$app/Contents/Resources/app-update.yml"
             test -f "$update" || { echo "::error::missing $update"; exit 1; }
-            grep -Eq '^owner: milind-soni$' "$update" || { echo "::error::wrong update owner in $update"; exit 1; }
-            grep -Eq '^repo: OpenMausBot$' "$update" || { echo "::error::wrong update repo in $update"; exit 1; }
+            grep -Eq '^owner: hythevc$' "$update" || { echo "::error::wrong update owner in $update"; exit 1; }
+            grep -Eq '^repo: OpenMausBot_Grok$' "$update" || { echo "::error::wrong update repo in $update"; exit 1; }
           done
 
       - name: "Gate: the signature must verify BEFORE notarization"
         run: |
-          for app in release/mac-arm64/OpenMausBot.app release/mac/OpenMausBot.app; do
+          for app in release/mac-arm64/SquadBots.app release/mac/SquadBots.app; do
             codesign --verify --deep --strict "$app"
             bin="$app/Contents/Resources/cloudflared/cloudflared"
             test -x "$bin" || { echo "::error::missing executable $bin"; exit 1; }
@@ -174,8 +165,8 @@ jobs:
       - name: "Gate: signed native browser works with an empty home"
         run: |
           case "$(node -p process.arch)" in
-            arm64) resources="$PWD/release/mac-arm64/OpenMausBot.app/Contents/Resources" ;;
-            x64) resources="$PWD/release/mac/OpenMausBot.app/Contents/Resources" ;;
+            arm64) resources="$PWD/release/mac-arm64/SquadBots.app/Contents/Resources" ;;
+            x64) resources="$PWD/release/mac/SquadBots.app/Contents/Resources" ;;
             *) exit 1 ;;
           esac
           node scripts/smoke-browser-bundle.mjs --resources "$resources"
@@ -183,7 +174,7 @@ jobs:
 
       - name: "Gate: both packaged servers start and every helper path resolves"
         run: |
-          for app in release/mac-arm64/OpenMausBot.app release/mac/OpenMausBot.app; do
+          for app in release/mac-arm64/SquadBots.app release/mac/SquadBots.app; do
             res="$app/Contents/Resources"
             # the server tree is plain JS — runnable on the runner's node
             # regardless of the app binary's arch
@@ -236,17 +227,17 @@ jobs:
 
       - name: Staple, re-zip, regenerate blockmaps and the feed
         run: |
-          xcrun stapler staple release/OpenMausBot-*-arm64.dmg
-          xcrun stapler staple release/OpenMausBot-*-x64.dmg
-          xcrun stapler staple release/mac-arm64/OpenMausBot.app
-          xcrun stapler staple release/mac/OpenMausBot.app
+          xcrun stapler staple release/SquadBots-*-arm64.dmg
+          xcrun stapler staple release/SquadBots-*-x64.dmg
+          xcrun stapler staple release/mac-arm64/SquadBots.app
+          xcrun stapler staple release/mac/SquadBots.app
           v=$(node -p "require('./package.json').version")
-          rm -f "release/OpenMausBot-$v-arm64.zip" "release/OpenMausBot-$v-x64.zip"
-          ditto -c -k --sequesterRsrc --keepParent release/mac-arm64/OpenMausBot.app "release/OpenMausBot-$v-arm64.zip"
-          ditto -c -k --sequesterRsrc --keepParent release/mac/OpenMausBot.app "release/OpenMausBot-$v-x64.zip"
+          rm -f "release/SquadBots-$v-arm64.zip" "release/SquadBots-$v-x64.zip"
+          ditto -c -k --sequesterRsrc --keepParent release/mac-arm64/SquadBots.app "release/SquadBots-$v-arm64.zip"
+          ditto -c -k --sequesterRsrc --keepParent release/mac/SquadBots.app "release/SquadBots-$v-x64.zip"
           node scripts/regenerate-blockmaps.mjs \
-            "release/OpenMausBot-$v-arm64.zip" "release/OpenMausBot-$v-x64.zip" \
-            "release/OpenMausBot-$v-arm64.dmg" "release/OpenMausBot-$v-x64.dmg"
+            "release/SquadBots-$v-arm64.zip" "release/SquadBots-$v-x64.zip" \
+            "release/SquadBots-$v-arm64.dmg" "release/SquadBots-$v-x64.dmg"
           # refreshes every hash from the post-staple bytes and refuses to
           # finish unless the feed matches the files on disk
           node scripts/regenerate-mac-feed.mjs
@@ -254,8 +245,8 @@ jobs:
       - name: Stable-named copies for the README's /latest/download links
         run: |
           v=$(node -p "require('./package.json').version")
-          cp "release/OpenMausBot-$v-arm64.dmg" release/OpenMausBot.dmg
-          cp "release/OpenMausBot-$v-x64.dmg" release/OpenMausBot-intel.dmg
+          cp "release/SquadBots-$v-arm64.dmg" release/SquadBots.dmg
+          cp "release/SquadBots-$v-x64.dmg" release/SquadBots-intel.dmg
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -310,8 +301,8 @@ jobs:
           "$res/cloudflared/cloudflared.exe" version | grep -Fq "cloudflared version 2026.8.2 " || {
             echo "::error::cloudflared has the wrong version"; exit 1; }
           [ -f "$res/app-update.yml" ] || { echo "::error::missing app-update.yml"; exit 1; }
-          grep -Eq '^owner: milind-soni$' "$res/app-update.yml" || { echo "::error::wrong update owner"; exit 1; }
-          grep -Eq '^repo: OpenMausBot$' "$res/app-update.yml" || { echo "::error::wrong update repo"; exit 1; }
+          grep -Eq '^owner: hythevc$' "$res/app-update.yml" || { echo "::error::wrong update owner"; exit 1; }
+          grep -Eq '^repo: OpenMausBot_Grok$' "$res/app-update.yml" || { echo "::error::wrong update repo"; exit 1; }
           if grep -q "publisherName" "$res/app-update.yml"; then
             echo "::error::publisherName on an unsigned build breaks every update"; exit 1
           fi
@@ -330,7 +321,7 @@ jobs:
         shell: bash
         run: |
           v=$(node -p "require('./package.json').version")
-          cp "release/OpenMausBot-$v-setup.exe" release/OpenMausBot-setup.exe
+          cp "release/SquadBots-$v-setup.exe" release/SquadBots-setup.exe
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: windows-release
@@ -373,8 +364,8 @@ jobs:
         run: |
           update=release/linux-unpacked/resources/app-update.yml
           test -f "$update" || { echo "::error::missing $update"; exit 1; }
-          grep -Eq '^owner: milind-soni$' "$update" || { echo "::error::wrong update owner"; exit 1; }
-          grep -Eq '^repo: OpenMausBot$' "$update" || { echo "::error::wrong update repo"; exit 1; }
+          grep -Eq '^owner: hythevc$' "$update" || { echo "::error::wrong update owner"; exit 1; }
+          grep -Eq '^repo: OpenMausBot_Grok$' "$update" || { echo "::error::wrong update repo"; exit 1; }
       - name: Verify package contents and metadata
         run: node scripts/verify-linux-package.mjs
       - name: Match a normal Ubuntu package parent on the ephemeral runner
@@ -398,11 +389,11 @@ jobs:
           sudo chmod 4755 release/linux-unpacked/chrome-sandbox
           test "$(stat -c '%U:%G %a' release/linux-unpacked/chrome-sandbox)" = "root:root 4755"
       - name: "Gate: installed browser works with Ubuntu sandbox restrictions"
-        run: node scripts/smoke-browser-bundle.mjs --resources /opt/OpenMausBot/resources
+        run: node scripts/smoke-browser-bundle.mjs --resources /opt/SquadBots/resources
       - name: "Gate: packaged Linux server discovers its browser"
         env:
-          OMB_SMOKE_DIST: /opt/OpenMausBot/resources/server
-        run: node scripts/smoke-packaged-server.mjs --browser-bundle /opt/OpenMausBot/resources/browser-engine
+          OMB_SMOKE_DIST: /opt/SquadBots/resources/server
+        run: node scripts/smoke-packaged-server.mjs --browser-bundle /opt/SquadBots/resources/browser-engine
       - name: Smoke the packages
         env:
           OMB_KEEP_SMOKE_DIR: "1"
@@ -414,9 +405,9 @@ jobs:
       - name: Stable-named copies and checksums
         run: |
           v=$(node -p "require('./package.json').version")
-          cp "release/OpenMausBot-$v-amd64.deb" release/OpenMausBot-amd64.deb
-          cp "release/OpenMausBot-$v-x86_64.AppImage" release/OpenMausBot.AppImage
-          (cd release && sha256sum OpenMausBot-$v-amd64.deb OpenMausBot-$v-x86_64.AppImage > SHA256SUMS-ubuntu-x64.txt)
+          cp "release/SquadBots-$v-amd64.deb" release/SquadBots-amd64.deb
+          cp "release/SquadBots-$v-x86_64.AppImage" release/SquadBots.AppImage
+          (cd release && sha256sum "SquadBots-$v-amd64.deb" "SquadBots-$v-x86_64.AppImage" > SHA256SUMS-ubuntu-x64.txt)
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: linux-release
@@ -439,8 +430,6 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write
-      # to dispatch the npm and Docker publishes on the new tag
-      actions: write
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -452,20 +441,20 @@ jobs:
         run: |
           required=(
             latest-linux.yml latest-mac.yml latest.yml
-            "OpenMausBot-$VERSION-amd64.deb"
-            "OpenMausBot-$VERSION-arm64.dmg"
-            "OpenMausBot-$VERSION-arm64.dmg.blockmap"
-            "OpenMausBot-$VERSION-arm64.zip"
-            "OpenMausBot-$VERSION-arm64.zip.blockmap"
-            "OpenMausBot-$VERSION-setup.exe"
-            "OpenMausBot-$VERSION-setup.exe.blockmap"
-            "OpenMausBot-$VERSION-x64.dmg"
-            "OpenMausBot-$VERSION-x64.dmg.blockmap"
-            "OpenMausBot-$VERSION-x64.zip"
-            "OpenMausBot-$VERSION-x64.zip.blockmap"
-            "OpenMausBot-$VERSION-x86_64.AppImage"
-            OpenMausBot-amd64.deb OpenMausBot-intel.dmg OpenMausBot-setup.exe
-            OpenMausBot.AppImage OpenMausBot.dmg SHA256SUMS-ubuntu-x64.txt
+            "SquadBots-$VERSION-amd64.deb"
+            "SquadBots-$VERSION-arm64.dmg"
+            "SquadBots-$VERSION-arm64.dmg.blockmap"
+            "SquadBots-$VERSION-arm64.zip"
+            "SquadBots-$VERSION-arm64.zip.blockmap"
+            "SquadBots-$VERSION-setup.exe"
+            "SquadBots-$VERSION-setup.exe.blockmap"
+            "SquadBots-$VERSION-x64.dmg"
+            "SquadBots-$VERSION-x64.dmg.blockmap"
+            "SquadBots-$VERSION-x64.zip"
+            "SquadBots-$VERSION-x64.zip.blockmap"
+            "SquadBots-$VERSION-x86_64.AppImage"
+            SquadBots-amd64.deb SquadBots-intel.dmg SquadBots-setup.exe
+            SquadBots.AppImage SquadBots.dmg SHA256SUMS-ubuntu-x64.txt
           )
           for file in "${required[@]}"; do
             test -s "assets/$file" || { echo "::error::missing or empty release asset: $file"; exit 1; }
@@ -481,15 +470,15 @@ jobs:
           const sha512 = (f) => createHash("sha512").update(readFileSync(f)).digest("base64");
           const expected = new Map([
             ["latest-mac.yml", [
-              "OpenMausBot-${{ needs.prepare.outputs.version }}-x64.zip",
-              "OpenMausBot-${{ needs.prepare.outputs.version }}-arm64.zip",
-              "OpenMausBot-${{ needs.prepare.outputs.version }}-x64.dmg",
-              "OpenMausBot-${{ needs.prepare.outputs.version }}-arm64.dmg",
+              "SquadBots-${{ needs.prepare.outputs.version }}-x64.zip",
+              "SquadBots-${{ needs.prepare.outputs.version }}-arm64.zip",
+              "SquadBots-${{ needs.prepare.outputs.version }}-x64.dmg",
+              "SquadBots-${{ needs.prepare.outputs.version }}-arm64.dmg",
             ]],
-            ["latest.yml", ["OpenMausBot-${{ needs.prepare.outputs.version }}-setup.exe"]],
+            ["latest.yml", ["SquadBots-${{ needs.prepare.outputs.version }}-setup.exe"]],
             ["latest-linux.yml", [
-              "OpenMausBot-${{ needs.prepare.outputs.version }}-x86_64.AppImage",
-              "OpenMausBot-${{ needs.prepare.outputs.version }}-amd64.deb",
+              "SquadBots-${{ needs.prepare.outputs.version }}-x86_64.AppImage",
+              "SquadBots-${{ needs.prepare.outputs.version }}-amd64.deb",
             ]],
           ]);
           let bad = 0;
@@ -541,7 +530,7 @@ jobs:
             done
           }
           ensure_draft "$GITHUB_REPOSITORY" --target "$SHA" \
-            --draft --title "OpenMausBot $VERSION" --generate-notes
+            --draft --title "SquadBots $VERSION" --generate-notes
           target=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json targetCommitish --jq .targetCommitish)
           target_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$target" --jq .sha)
           test "$target_sha" = "$SHA" || {
@@ -549,51 +538,17 @@ jobs:
             exit 1
           }
           for file in assets/*; do
+            gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft | grep -q true || {
+              echo "::error::$tag is no longer a draft; refusing to replace published assets"
+              exit 1
+            }
             gh release upload "$tag" "$file" --repo "$GITHUB_REPOSITORY" --clobber
           done
-          # A rerun preserves human edits made while reviewing the canonical
-          # draft, and mirrors that exact body into the compatibility release.
-          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/release-notes.md"
           echo "canonical asset count: $(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
 
-      - name: Mirror the same draft for installed legacy clients
-        env:
-          GH_TOKEN: ${{ secrets.RELEASES_PAT }}
-          VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          tag="v$VERSION"
-          ensure_draft() {
-            local repo=$1
-            shift
-            local attempt delay
-            for attempt in 1 2 3 4 5; do
-              gh release view "$tag" --repo "$repo" > /dev/null 2>&1 && return 0
-              if gh release create "$tag" --repo "$repo" "$@"; then
-                return 0
-              fi
-              gh release view "$tag" --repo "$repo" > /dev/null 2>&1 && return 0
-              test "$attempt" -lt 5 || {
-                echo "::error::could not create $tag in $repo after $attempt attempts"
-                return 1
-              }
-              delay=$((5 << (attempt - 1)))
-              echo "::warning::release creation failed for $repo; retrying in ${delay}s ($attempt/5)"
-              sleep "$delay"
-            done
-          }
-          ensure_draft milind-soni/openmausbot-releases \
-            --draft --title "OpenMausBot $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"
-          gh release edit "$tag" --repo milind-soni/openmausbot-releases \
-            --title "OpenMausBot $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"
-          for file in assets/*; do
-            gh release upload "$tag" "$file" --repo milind-soni/openmausbot-releases --clobber
-          done
-          echo "legacy asset count: $(gh release view "$tag" --repo milind-soni/openmausbot-releases --json assets --jq '.assets | length')"
-
-      - name: Prove both drafts contain the exact staged bytes
+      - name: Prove the canonical draft contains the exact staged bytes
         env:
           CANONICAL_TOKEN: ${{ github.token }}
-          LEGACY_TOKEN: ${{ secrets.RELEASES_PAT }}
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           node --input-type=module - "$VERSION" <<'EOF'
@@ -608,7 +563,6 @@ jobs:
           ]));
           for (const [repo, token] of [
             [process.env.GITHUB_REPOSITORY, process.env.CANONICAL_TOKEN],
-            ["milind-soni/openmausbot-releases", process.env.LEGACY_TOKEN],
           ]) {
             const json = execFileSync("gh", ["release", "view", `v${version}`, "--repo", repo, "--json", "assets"], {
               encoding: "utf8",
@@ -627,24 +581,10 @@ jobs:
         if: ${{ inputs.publish }}
         env:
           CANONICAL_TOKEN: ${{ github.token }}
-          LEGACY_TOKEN: ${{ secrets.RELEASES_PAT }}
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
-          # The bridge build points at the canonical feed. Publish and verify
-          # that destination before making the build visible to legacy clients.
           GH_TOKEN="$CANONICAL_TOKEN" gh release edit "v$VERSION" \
             --repo "$GITHUB_REPOSITORY" --draft=false --latest
           GH_TOKEN="$CANONICAL_TOKEN" gh release view "v$VERSION" \
             --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft | grep -q false
-          GH_TOKEN="$LEGACY_TOKEN" gh release edit "v$VERSION" \
-            --repo milind-soni/openmausbot-releases --draft=false --latest
-          GH_TOKEN="$LEGACY_TOKEN" gh release view "v$VERSION" \
-            --repo milind-soni/openmausbot-releases --json isDraft --jq .isDraft | grep -q false
-          echo "v$VERSION is live on the canonical feed and its legacy updater bridge"
-          # Publishing created the tag with this workflow's token, and GitHub
-          # starts no workflow from events that token creates. Start the two
-          # tag-driven publishes by hand, on the tag, so they see refs/tags/v*.
-          for workflow in npm-package.yml docker.yml; do
-            GH_TOKEN="$CANONICAL_TOKEN" gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref "v$VERSION"
-          done
-          echo "dispatched the npm package and Docker image publishes on v$VERSION"
+          echo "v$VERSION is live on the owned SquadBots release feed"

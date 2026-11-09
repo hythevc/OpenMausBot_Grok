@@ -75,8 +75,8 @@ function requireUpdaterTarget(resources, label) {
   const updateFile = path.join(resources, "app-update.yml");
   requireFile(updateFile);
   const update = readFileSync(updateFile, "utf8");
-  if (!/^owner: milind-soni$/m.test(update) || !/^repo: OpenMausBot$/m.test(update)) {
-    fail(`${label} app-update.yml does not point at milind-soni/OpenMausBot`);
+  if (!/^owner: hythevc$/m.test(update) || !/^repo: OpenMausBot_Grok$/m.test(update)) {
+    fail(`${label} app-update.yml does not point at hythevc/OpenMausBot_Grok`);
   }
 }
 
@@ -435,7 +435,7 @@ for (const expected of [
 const extracted = mkdtempSync(path.join(tmpdir(), "omb-deb-verify-"));
 try {
   execFileSync("dpkg-deb", ["--extract", deb, extracted]);
-  const debAppRoot = path.join(extracted, "opt", "OpenMausBot");
+  const debAppRoot = path.join(extracted, "opt", "SquadBots");
   requireDirectoryMode(debAppRoot, 0o755);
   const debResources = path.join(debAppRoot, "resources");
   // Routes the in-app updater to the package-manager hand-off.
@@ -455,7 +455,7 @@ try {
     "usr",
     "share",
     "applications",
-    "com.openmausbot.app.desktop",
+    "ai.squadbots.app.desktop",
   );
   const scalableIcon = path.join(
     extracted,
@@ -471,10 +471,10 @@ try {
   requireFile(scalableIcon);
   const desktop = readFileSync(desktopFile, "utf8");
   for (const expected of [
-    "Name=OpenMausBot",
-    "Exec=/opt/OpenMausBot/openmausbot %U",
+    "Name=SquadBots",
+    "Exec=/opt/SquadBots/openmausbot %U",
     "Icon=openmausbot",
-    "StartupWMClass=com.openmausbot.app",
+    "StartupWMClass=ai.squadbots.app",
     "Categories=Utility;",
   ]) {
     if (!desktop.includes(expected)) fail(`desktop entry is missing ${JSON.stringify(expected)}`);

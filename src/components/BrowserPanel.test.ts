@@ -124,6 +124,119 @@ describe("live browser connection lifecycle", () => {
     replacementCleanup?.();
   });
 
+  it("expires a silent viewer after 30 seconds and reconnects without replaying input or taking control", () => {
+    vi.useFakeTimers();
+    render();
+    const connect = fixture.effects[2]!;
+    const cleanup = connect();
+    const source = FixtureEventSource.instances[0]!;
+    source.emit("ready", { viewerId: "silent-viewer" });
+    source.emit("control", { held: true, controlling: true, owned: true });
+    source.emit("frame", { seq: 1, data: "fixture-frame" });
+    vi.advanceTimersByTime(29_999);
+    expect(source.close).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(source.close).toHaveBeenCalledOnce();
+    expect(fixture.setters[4]).toHaveBeenLastCalledWith(false);
+    expect(fixture.setters[1]).toHaveBeenLastCalledWith(null);
+    expect(fixture.setters[5]).toHaveBeenLastCalledWith({ held: false, controlling: false, owned: false });
+    expect(fixture.queues[0]!.clear).toHaveBeenCalledOnce();
+    source.emit("control", { held: true, controlling: true, owned: true });
+    source.emit("frame", { seq: 2, data: "late-frame" });
+    expect(fixture.setters[1]).toHaveBeenLastCalledWith(null);
+    expect(fixture.setters[5]).toHaveBeenLastCalledWith({ held: false, controlling: false, owned: false });
+    vi.advanceTimersByTime(1_000);
+    expect(fixture.setters[0]).toHaveBeenCalledOnce();
+    cleanup?.();
+    const replacementCleanup = connect();
+    FixtureEventSource.instances[1]!.emit("ready", { viewerId: "new-viewer" });
+    expect(api).not.toHaveBeenCalled();
+    expect(fixture.queues[1]!.enqueue).not.toHaveBeenCalled();
+    replacementCleanup?.();
+  });
+
+  it("keeps a static browser view connected while heartbeats arrive and expires relative to the last heartbeat", () => {
+    vi.useFakeTimers();
+    render();
+    const cleanup = fixture.effects[2]!();
+    const source = FixtureEventSource.instances[0]!;
+    source.emit("ready", { viewerId: "healthy-viewer" });
+    for (let beat = 0; beat < 6; beat++) {
+      vi.advanceTimersByTime(10_000);
+      source.emit("heartbeat", {});
+    }
+    vi.advanceTimersByTime(29_999);
+    expect(source.close).not.toHaveBeenCalled();
+    expect(fixture.setters[4]).toHaveBeenLastCalledWith(true);
+    expect(fixture.setters[0]).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(source.close).toHaveBeenCalledOnce();
+    cleanup?.();
+  });
+
+  it("keeps recovery feedback when an old command fails after its viewer expires", async () => {
+    vi.useFakeTimers();
+    const nodes = renderElements();
+    const cleanup = fixture.effects[2]!();
+    FixtureEventSource.instances[0]!.emit("ready", { viewerId: "silent-viewer" });
+    const command = deferred();
+    vi.mocked(api).mockReturnValueOnce(command.promise);
+    click(nodes, "Take control"); await settle();
+    vi.advanceTimersByTime(30_000);
+    command.reject(new Error("Late command failure")); await settle();
+    expect(fixture.setters[7]).toHaveBeenLastCalledWith("Connection interrupted. Reconnecting the browser view…");
+    vi.advanceTimersByTime(1_000);
+    expect(fixture.setters[0]).toHaveBeenCalledOnce();
+    cleanup?.();
+  });
+
+  it.each(["unmount", "manual reconnect", "profile change"])("fences a silent viewer deadline after %s", (replacement) => {
+    vi.useFakeTimers();
+    const nodes = renderElements();
+    const connect = fixture.effects[2]!;
+    const cleanup = connect();
+    const oldSource = FixtureEventSource.instances[0]!;
+    oldSource.emit("ready", { viewerId: "old-viewer" });
+    vi.advanceTimersByTime(25_000);
+    if (replacement === "manual reconnect") click(nodes, "Reconnect view");
+    if (replacement === "profile change") nodes.find((node) => node.type === BrowserProfilesManager)!.props.onProfileChanged!();
+    // Manual reconnect invalidates its generation before React cleans up.
+    if (replacement === "unmount") cleanup?.();
+    fixture.setters.forEach((setter) => setter.mockClear());
+    vi.advanceTimersByTime(5_000);
+    expect(fixture.setters.every((setter) => setter.mock.calls.length === 0)).toBe(true);
+    if (replacement !== "unmount") cleanup?.();
+    const replacementCleanup = connect();
+    const newSource = FixtureEventSource.instances[1]!;
+    newSource.emit("ready", { viewerId: "new-viewer" });
+    oldSource.emit("heartbeat", {});
+    oldSource.emit("control", { held: true, controlling: true, owned: true });
+    vi.advanceTimersByTime(10_000);
+    newSource.emit("heartbeat", {});
+    expect(newSource.close).not.toHaveBeenCalled();
+    expect(fixture.queues[1]!.clear).not.toHaveBeenCalled();
+    expect(fixture.setters[5]).toHaveBeenLastCalledWith({ held: false, controlling: false, owned: false });
+    replacementCleanup?.();
+  });
+
+  it("bounds automatic retries for viewers that repeatedly become ready without a heartbeat", () => {
+    vi.useFakeTimers();
+    render();
+    const connect = fixture.effects[2]!;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const cleanup = connect();
+      const source = FixtureEventSource.instances.at(-1)!;
+      source.emit("ready", { viewerId: `silent-${attempt}` });
+      vi.advanceTimersByTime(30_000);
+      expect(source.close).toHaveBeenCalledOnce();
+      vi.advanceTimersByTime(15_000);
+      expect(fixture.setters[0]).toHaveBeenCalledTimes(Math.min(attempt + 1, 5));
+      cleanup?.();
+    }
+    expect(fixture.setters[7]).toHaveBeenLastCalledWith("Browser connection ended. Reconnect to continue watching.");
+    expect(api).not.toHaveBeenCalled();
+  });
+
   it("bounds retries even when a flapping stream sends ready before disconnecting", () => {
     vi.useFakeTimers();
     render();

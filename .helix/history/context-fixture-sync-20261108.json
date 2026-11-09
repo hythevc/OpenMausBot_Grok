@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 2,
+  "project": "SquadBots context recovery fixture synchronization",
+  "artifactType": "test-fixture",
+  "codingTool": "Codex",
+  "icp": "SquadBots engineers and customers relying on correct context recovery",
+  "buyerPain": "A fixture race obscures whether changed bot instructions start a fresh session",
+  "revenueHypothesis": "Reliable regression evidence prevents incorrect release decisions",
+  "objective": "Make the existing context-reset regression wait for its intended pre-mutation snapshot through an existing progress event",
+  "acceptanceCriteria": [
+    "Reproduce the failure on unchanged base",
+    "Use an existing observable event barrier with no sleep",
+    "Keep all original behavioral assertions",
+    "Run the named regression and affected suite in a credential-free environment",
+    "Independent review"
+  ],
+  "canonicalGitHub": {
+    "repo": "hythevc/OpenMausBot_Grok",
+    "branch": "codex/context-recovery-fixture-sync-20261108",
+    "baseCommit": "1bb1bc4dd23f07df8b5dd7d96a81204532a13b97",
+    "published": false
+  },
+  "maker": "squadbots_behavior_builder",
+  "checker": "independent specification reviewer",
+  "caps": {
+    "minutes": 10,
+    "attempts": 3,
+    "activeRoles": 3,
+    "spend": 0
+  },
+  "startedAt": "2026-11-08T20:47:30Z",
+  "deadlineAt": "2026-11-08T20:57:28Z",
+  "rollback": "Revert the isolated test-only commit; no product behavior changes",
+  "evidence": "../squadbots-browser-recovery-evidence-20261108",
+  "vercel": {
+    "mode": "not_applicable",
+    "reason": "Test-only fixture synchronization; no runtime or hosted product deployment"
+  },
+  "stopCondition": "Verified bounded regression fix or exact timeout; do not weaken assertions or modify the separate browser-recovery commit",
+  "deliveryStatus": "implemented and independently reviewed locally; publication and repository-wide release gates unresolved",
+  "verification": {
+    "unchangedBase": "same original regression failed in clean environment",
+    "namedRegression": {
+      "passed": 1,
+      "filteredSkips": 36,
+      "exitCode": 0
+    },
+    "affectedFile": {
+      "passed": 37,
+      "failed": 0,
+      "exitCode": 0
+    },
+    "independentReview": "ACCEPT; separate named run passed",
+    "scopedLint": "passed",
+    "diffCheck": "passed",
+    "runtimeChanges": false,
+    "fullSuite": "not rerun after fixture change; original broad run remains failed",
+    "sourceDiffSha256": "8bdf5386dff206dcd3b9a9fe98d48b636472c8d27282cb72f343a3065ca17823"
+  }
+}

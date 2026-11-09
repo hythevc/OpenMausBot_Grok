@@ -74,7 +74,7 @@ async function main() {
   const desktopEntry = path.join(applications, "com.openmausbot.app.desktop");
   writeFileSync(
     desktopEntry,
-    `[Desktop Entry]\nName=OpenMausBot\nExec=${launched} %U\nType=Application\n`,
+    `[Desktop Entry]\nName=SquadBots\nExec=${launched} %U\nType=Application\n`,
   );
 
   // Isolate every path the updater writes to.

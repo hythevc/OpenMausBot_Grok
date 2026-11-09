@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 2,
+  "project": "SquadBots CI fixture cleanup",
+  "company": "SquadBots",
+  "artifactType": "macos-agent",
+  "icp": "Customers supervising AI teammates on their paired Mac",
+  "pain": "Shared API fixtures leave active channel owners behind after rejected cleanup, contaminating later CI assertions",
+  "revenueHypothesis": "Trustworthy control recovery and reliable release evidence support paid teammate workflows",
+  "mvpAcceptance": [
+    "Preserve all production guards and test assertions",
+    "Deterministically settle exact fixture-owned work and verify cleanup success",
+    "Run affected API tests and the combined complete suite with clean credentials-free test environments",
+    "Publish reviewed changes to the existing draft PR and require exact-head CI",
+    "Preserve earlier evidence and blocked DAST/account requirements without declaring launch readiness"
+  ],
+  "maker": "ci_fixture_fix",
+  "codingTool": "codex",
+  "rollback": "Revert only the integration commit or close the isolated draft branch; preserve both original reviewed commits and all customer data. No production deployment is part of this unit.",
+  "stopConditions": [
+    "Stop on a tool denial for that exact action; never bypass it through another credential",
+    "Stop on secret exposure, target ambiguity, an active duplicate, three failed attempts or 30 minutes",
+    "Keep production release blocked while security, identity or native distribution evidence is incomplete"
+  ],
+  "evidenceDestination": ".helix/evidence/ci-cleanup",
+  "executionEvidence": ".helix/evidence/ci-cleanup/execution.json",
+  "copySafety": {
+    "publicPatternSources": [],
+    "proprietaryAssetsExcluded": true
+  },
+  "limits": {
+    "maxMinutes": 30,
+    "maxAgents": 3,
+    "maxAttempts": 3
+  },
+  "github": {
+    "repo": "hythevc/OpenMausBot_Grok",
+    "remote": "origin",
+    "branch": "codex/recovery-integration-20261108",
+    "baseBranch": "main",
+    "commit": "HEAD"
+  },
+  "vercel": {
+    "mode": "not_applicable",
+    "category": "macos-agent",
+    "exceptionReason": "This unit repairs disposable local API test fixtures for the desktop agent runtime. Vercel cannot execute this process/browser harness and would not prove CI cleanup. It does not deploy or certify the hosted SaaS product.",
+    "runtimeEvidence": ".helix/evidence/ci-cleanup/runtime.json",
+    "approvalEvidence": "controller://exception/squadbots-ci-cleanup-20261108"
+  },
+  "verification": {
+    "checks": [
+      {
+        "name": "typecheck + lint",
+        "evidence": ".helix/evidence/ci-cleanup/check-static.json"
+      },
+      {
+        "name": "typecheck + test (ubuntu-latest)",
+        "evidence": ".helix/evidence/ci-cleanup/check-ubuntu.json"
+      },
+      {
+        "name": "typecheck + test (macos-latest)",
+        "evidence": ".helix/evidence/ci-cleanup/check-macos.json"
+      },
+      {
+        "name": "typecheck + test (windows-latest)",
+        "evidence": ".helix/evidence/ci-cleanup/check-windows.json"
+      }
+    ],
+    "checker": "squadbots_delivery_checker",
+    "checkerEvidence": "controller://checker/squadbots-ci-cleanup-20261108"
+  },
+  "scopeRecord": {
+    "startedAt": "2026-11-08T21:46:15.734945+00:00",
+    "deadlineAt": "2026-11-08T22:15:00Z",
+    "newSpendBudget": 0,
+    "inputCommit": "004a04dc06cadba1c2dbbac024619ca86c347769",
+    "priorUnit": "First unit retained as partial; this unit addresses the newly proven fixture cleanup failure",
+    "roles": [
+      "root-integration",
+      "ci_fixture_fix",
+      "squadbots_delivery_checker"
+    ],
+    "causeEvidence": ".helix/evidence/successor-fixture-findings.txt",
+    "priorPRListing": "Denied; no bypass. Continue the already-created draftPR12."
+  }
+}
